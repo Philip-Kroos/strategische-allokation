@@ -27,5 +27,6 @@ out = ROOT / "docs" / "index.html"
 out.write_text(page)
 art = ROOT / "build" / "artifact.html"
 art.parent.mkdir(exist_ok=True)
-art.write_text(body)
+art.write_text(body.replace('href="arbeitspapier.pdf"',
+                            'href="https://philip-kroos.github.io/strategische-allokation/arbeitspapier.pdf"'))
 print(f"wrote {out} and {art}")
