@@ -23,6 +23,26 @@
     return out;
   }
 
+  // Model portfolio at a given risk: strategic weights from the ten-year
+  // expected returns (valuation), active bets limited to +/-BAND around the
+  // reference portfolio, then the tactical trend tilt on top.
+  function modelWeights(vol) {
+    const S = SIG.pos, cf = state.conf; state.conf = 0.25;
+    const lb0 = LB.slice(), ub0 = UB.slice();
+    K.forEach((k, i) => {
+      if (k === "cash" || k === "bund") { LB[i] = 0; UB[i] = 0.7; }
+      else { LB[i] = Math.max(0, wRef[i] - BAND); UB[i] = Math.min(ub0[i], wRef[i] + BAND); }
+    });
+    const wS = targetVol(blendedMu(S), S, Math.min(Math.max(vol, 0.03), 0.15)).w;
+    lb0.forEach((v, i) => { LB[i] = v; UB[i] = ub0[i]; });
+    state.conf = cf;
+    return { strat: wS, total: applyTilt(wS) };
+  }
+  const REFVOL = Math.sqrt(quad(SIG.pos, wRef));
+  const MODEL = modelWeights(REFVOL);
+  // stance per asset class: total active weight relative to the band
+  const stance = (k) => (MODEL.total[idx[k]] - wRef[idx[k]]) / 0.08;
+
   // plus / minus points per asset class, formulated from the data
   function classPoints(k) {
     const c = CL[k], d = c.detail, a = A[idx[k]], cashE = state.exp[idx.cash];
@@ -69,16 +89,14 @@
 
   function drawSignals() {
     const tb = document.querySelector("#tbl-sig tbody");
-    const tac = applyTilt(wRef);
-    document.getElementById("sig-cap").textContent = `Signale zum ${monthName(SGN.as_of)}. Skala von −1 (negativ) bis +1 (positiv). Taktische Quote = Referenz plus bis zu ±${nf(0).format(TILT.eq_us * 100)} Prozentpunkte.`;
+    document.getElementById("sig-cap").textContent = `Signale zum ${monthName(SGN.as_of)}, Skala −1 bis +1. Quoten für das Referenzrisiko von ${pct(REFVOL)} Volatilität.`;
     tb.innerHTML = K.map((k, i) => {
-      const c = CL[k];
+      const c = CL[k], st = MODEL.strat[i], tt = MODEL.total[i];
       return `<tr><td><span class="sw" style="background:${color(k)}"></span>${name(k)}</td>
         <td style="text-align:center">${k === "cash" ? "–" : bar(c.val)}</td>
         <td style="text-align:center">${k === "cash" ? "–" : bar(c.trend)}</td>
-        <td style="text-align:center">${k === "cash" ? "–" : bar(c.score)}</td>
-        <td style="text-align:left">${k === "cash" ? '<span class="muted">Restgröße</span>' : pill(c.score)}</td>
-        <td>${pct(wRef[i], 0)}</td><td><b>${pct(tac[i], 0)}</b></td></tr>`;
+        <td>${pct(wRef[i], 0)}</td><td>${pct(st, 0)}</td><td><b>${pct(tt, 0)}</b></td>
+        <td style="text-align:left">${k === "cash" ? '<span class="muted">Restgröße</span>' : pill(stance(k))}</td></tr>`;
     }).join("");
     const bt = SGN.backtest, T1 = bt.tactical, R1 = bt.reference;
     document.getElementById("bt-cap").textContent = `${monthName(bt.start)} bis ${monthName(bt.end)}, nach Kosten`;
@@ -86,7 +104,9 @@
     document.querySelector("#tbl-bt tbody").innerHTML =
       row("Rendite p. a.", T1.cagr, R1.cagr, (x) => pct(x)) + row("Volatilität p. a.", T1.vol, R1.vol, (x) => pct(x)) +
       row("Sharpe-Ratio", T1.sharpe, R1.sharpe, (x) => num(x, 2)) + row("Max. Drawdown", T1.mdd, R1.mdd, (x) => spct(x));
-    document.getElementById("bt-note").innerHTML = `Mehrrendite <b>${spct(bt.excess_pa)}</b> p. a. bei einem Tracking Error von ${pct(bt.te)}, Information Ratio ${num(bt.ir, 2)}, t-Wert ${num(bt.t_stat, 1)}. In ${nf(0).format(bt.hit_years * 100)} % der Jahre besser als die Referenz. Umschlag ${pct(bt.turnover_pa, 0)} p. a., Kosten ${nf(1).format(bt.cost * 1e4)} Basispunkte je Umschichtung. Getestet ist nur das Trendsignal mit Vormonatsdaten, weil die Bewertung nicht für alle Klassen eine Monatshistorie hat.`;
+    document.getElementById("bt-note").innerHTML = `Mehrrendite <b>${spct(bt.excess_pa)}</b> p. a. bei einem Tracking Error von ${pct(bt.te)}, Information Ratio ${num(bt.ir, 2)}, t-Wert ${num(bt.t_stat, 1)}. In ${nf(0).format(bt.hit_years * 100)} % der Jahre besser als die Referenz. Umschlag ${pct(bt.turnover_pa, 0)} p. a., Kosten ${nf(1).format(bt.cost * 1e4)} Basispunkte je Umschichtung. Signale jeweils mit Daten des Vormonats.`;
+    const V = SGN.variants, vr = (l, v) => `<tr><td>${l}</td><td class="${v.excess_pa < 0 ? "neg" : "pos"}">${spct(v.excess_pa)}</td><td>${num(v.ir, 2).replace("-", "−")}</td><td>${num(v.t_stat, 1).replace("-", "−")}</td></tr>`;
+    document.querySelector("#tbl-var tbody").innerHTML = vr("Trend", V.trend) + vr("Bewertung", V.bewertung) + vr("Beide je zur Hälfte", V.kombiniert);
     drawBacktest();
   }
   function drawBacktest() {
@@ -179,19 +199,8 @@
     const volU = Math.sqrt(mU.vol * mU.vol + idioVar);
     const egU = mU.ea - volU * volU / 2;
     // model portfolio at the same systematic risk, strategic plus tactical
-    // Active bets are limited to +/-10 percentage points around the reference
-    // portfolio for every risky class; cash and Bunds absorb the risk level.
-    const cf = state.conf; state.conf = 0.25;
-    const tv = Math.min(Math.max(mU.vol, 0.03), 0.15);
-    const lb0 = LB.slice(), ub0 = UB.slice();
-    K.forEach((k, i) => {
-      if (k === "cash" || k === "bund") { LB[i] = 0; UB[i] = 0.7; }
-      else { LB[i] = Math.max(0, wRef[i] - BAND); UB[i] = Math.min(ub0[i], wRef[i] + BAND); }
-    });
-    const wS = targetVol(blendedMu(S), S, tv).w;
-    lb0.forEach((v, i) => { LB[i] = v; UB[i] = ub0[i]; });
-    state.conf = cf;
-    const wT = applyTilt(wS);
+    const mw = modelWeights(mU.vol);
+    const wT = mw.total;
     const mT = metrics(wT, S);
     const worst = (w) => M.stress.reduce((a, s) => { const v = stressHist(w, s); return v < a.v ? { v, n: s.name } : a; }, { v: 0, n: "" });
     const wsU = worst(wU), wsT = worst(wT);
@@ -224,13 +233,13 @@
         const d = wT[i] - wU[i];
         const act = d > 0.03 ? "aufstocken" : d < -0.03 ? "reduzieren" : "halten";
         if (wU[i] < 0.005 && wT[i] < 0.005) return "";
-        return `<tr><td><span class="sw" style="background:${color(k)}"></span>${name(k)}</td><td>${pct(wU[i], 0)}</td><td><b>${pct(wT[i], 0)}</b></td><td class="${d > 0.03 ? "pos" : d < -0.03 ? "neg" : ""}">${spct(d, 0)}</td><td style="text-align:left">${act}</td><td style="text-align:left">${k === "cash" ? '<span class="muted">Restgröße</span>' : pill(CL[k].score)}</td></tr>`;
+        return `<tr><td><span class="sw" style="background:${color(k)}"></span>${name(k)}</td><td>${pct(wU[i], 0)}</td><td><b>${pct(wT[i], 0)}</b></td><td class="${d > 0.03 ? "pos" : d < -0.03 ? "neg" : ""}">${spct(d, 0)}</td><td style="text-align:left">${act}</td><td style="text-align:left">${k === "cash" ? '<span class="muted">Restgröße</span>' : pill(stance(k))}</td></tr>`;
       }).join("")}</tbody></table></div>`;
 
     // per position
     html += `<div class="pos-list">${pos.map(p => {
       const mp = posMap(p);
-      const sc = Object.entries(mp).reduce((s, [k, v]) => s + v * CL[k].score, 0);
+      const sc = Object.entries(mp).reduce((s, [k, v]) => s + v * stance(k), 0);
       const trendAct = Object.entries(mp).reduce((s, [k, v]) => s + v * (wT[idx[k]] - wU[idx[k]]) / Math.max(wU[idx[k]], 1e-9), 0);
       const tend = trendAct > 0.15 ? "aufstocken" : trendAct < -0.15 ? "reduzieren" : "halten";
       const cls = Object.entries(mp).filter(([, v]) => v >= 0.25).sort((a, b) => b[1] - a[1]);

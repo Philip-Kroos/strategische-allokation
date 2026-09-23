@@ -214,18 +214,19 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
   <section id="signale">
     <div class="sec-head"><h2><span class="no">2</span>Taktische Signale</h2></div>
     <div class="prose">
-      <p>Zwei Signale je Anlageklasse. <b>Bewertung</b> misst, wie teuer eine Anlage gegenüber ihrer eigenen Geschichte oder einem fairen Wert ist. Sie erklärt Renditen über Jahre, kaum über Monate. <b>Trend</b> misst die Überrendite der letzten zwölf Monate über Geldmarkt, skaliert mit der Schwankung. Er wirkt über Monate und versagt an Wendepunkten. Die Kombination gleicht beide Schwächen teilweise aus.</p>
+      <p>Zwei Signale je Anlageklasse, mit unterschiedlicher Aufgabe. <b>Bewertung</b> misst, wie teuer eine Anlage gegenüber ihrer Geschichte oder einem fairen Wert ist. Sie bestimmt die erwarteten Renditen über zehn Jahre und damit die <b>strategische</b> Quote. <b>Trend</b> misst die Überrendite der letzten zwölf Monate über Geldmarkt, skaliert mit der Schwankung. Er verschiebt die Quote <b>taktisch</b> um bis zu fünf Prozentpunkte.</p>
+      <p>Die Aufteilung folgt aus dem Test in Tabelle 2b. Als Monatssignal hat Bewertung seit 1993 Rendite gekostet, weil teure Märkte oft jahrelang teurer werden. Trend hat Rendite gebracht. Bewertung wirkt über Jahre, Trend über Monate.</p>
     </div>
     <div class="tablewrap">
       <table id="tbl-sig">
         <caption>Tabelle 1 <span class="muted" id="sig-cap"></span></caption>
-        <thead><tr><th>Anlageklasse</th><th style="text-align:center">Bewertung</th><th style="text-align:center">Trend</th><th style="text-align:center">Gesamt</th><th>Einstufung</th><th>Referenz</th><th>Taktisch</th></tr></thead>
+        <thead><tr><th>Anlageklasse</th><th style="text-align:center">Bewertung</th><th style="text-align:center">Trend</th><th>Referenz</th><th>Strategisch</th><th>Mit Trend</th><th style="text-align:left">Einstufung</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
     <div class="grid2" style="margin-top:1.8rem">
       <figure style="margin-top:0">
-        <div class="fig-title">Abbildung 1 <span class="muted">Trend-Beimischung gegenüber dem statischen Referenzportfolio, Wert von 1 € in EUR</span></div>
+        <div class="fig-title">Abbildung 1 <span class="muted">Referenzportfolio mit und ohne Trend-Signal, Wert von 1 € in EUR</span></div>
         <div class="chart" id="fig-bt"></div>
       </figure>
       <div>
@@ -238,6 +239,13 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
         </div>
         <p class="note" id="bt-note"></p>
       </div>
+    </div>
+    <div class="tablewrap">
+      <table id="tbl-var">
+        <caption>Tabelle 2b <span class="muted">Welches Signal taugt als Monatssignal? Mehrrendite gegenüber der Referenz, ohne Blick in die Zukunft</span></caption>
+        <thead><tr><th>Signal</th><th>p. a.</th><th>Information Ratio</th><th>t-Wert</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </div>
   </section>
 
