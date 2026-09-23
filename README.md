@@ -13,7 +13,7 @@ Nebenbedingungen, Vermögensprojektion und Stresstests mit regimeabhängigen Kor
 | Baustein | Methode |
 |---|---|
 | Portfolio-Check | Durchschau auf Fonds, Zusatzrisiko für Einzelaktien und enge Indizes, Modellportfolio mit gleichem Risiko und begrenzten aktiven Abweichungen |
-| Taktische Signale | Bewertung (CAPE, Realrendite, Spread, realer Goldpreis) und Trend (12-Monats-Überrendite je Volatilität); Trend-Beimischung seit 1993 getestet: +1,0 % p. a. nach Kosten, Information Ratio 0,69 |
+| Signale | Bewertung (CAPE, Realrendite, Spread, realer Goldpreis) geht über die Zehnjahresrenditen in die strategische Quote. Trend (12-Monats-Überrendite je Volatilität) verschiebt die Quote taktisch. Test seit 1993 ohne Blick in die Zukunft: Trend +1,0 % p. a. nach Kosten (t-Wert 4,0), Bewertung als Monatssignal −0,6 % p. a. |
 | Renditeannahmen Aktien | Mittel aus CAPE-Regression (Shiller-Daten 1881–2013, HAC-Standardfehler, Out-of-sample-Test) und Grinold-Kroner-Bausteinen (Dividende, Nettorückkäufe bzw. Verwässerung, reales Gewinnwachstum, teilweise Bewertungsnormalisierung) |
 | Renditeannahmen Anleihen | Startrendite. Empirisch geprüft für Bundesanleihen seit 1972 (R² 0,86) |
 | Risiko | Monatsrenditen in EUR 1990–2026, Ledoit-Wolf-Schrumpfung, Stambaugh-Projektion für kürzere Historien |
@@ -42,8 +42,22 @@ PYTHONPATH=src python -m saa.build     # schreibt docs/data/model.json
 python web/render.py                   # schreibt docs/index.html
 ```
 
-Aktualisierung der Marktdaten: Dateien in `data/raw/` ersetzen und die Marktinputs in
-`config/inputs.json` (Stand, CAPE, Verfallrenditen) anpassen.
+## Monatliche Aktualisierung
+
+Ein GitHub-Workflow (`.github/workflows/monatsupdate.yml`) läuft am 3. jedes Monats:
+
+```bash
+PYTHONPATH=src python -m saa.fetch     # lädt alle Rohdaten nach data/raw/
+PYTHONPATH=src python -m saa.build
+python web/render.py
+```
+
+Jede Quelle wird einzeln geladen. Fällt eine aus, bleibt die letzte Datei stehen, `data/raw/fetch_log.json`
+hält fest, was geklappt hat. Bundrendite, €STR, Spread und Kurse kommen direkt aus den Daten.
+CAPE und Dividendenrendite je Region haben keine freie Monatsquelle: sie stehen als datierte Anker in
+`config/inputs.json` und werden mit dem Kursindex fortgeschrieben, wobei der Zehnjahresdurchschnitt der
+Gewinne mit realem Wachstum plus Inflation mitwächst. Die Anker einmal im Quartal zu erneuern hält die
+Abweichung klein.
 
 ## Datenquellen
 
