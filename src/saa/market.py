@@ -69,10 +69,10 @@ def live_inputs(base: dict) -> tuple[dict, dict]:
 
     # Money market: latest €STR, path to neutral rate (a quarter weight on today)
     try:
-        e = pd.read_csv(R.RAW / "fred_estr.csv", na_values=".").dropna()
-        cur = float(e.iloc[-1, 1]) / 100
+        e = R.ecb_series("ecb_estr.csv")
+        cur = float(e.iloc[-1]) / 100
         inp["cash"]["current"] = round(cur, 4)
-        notes["cash"] = {"date": str(e.iloc[-1, 0]), "value": cur}
+        notes["cash"] = {"date": e.index[-1].strftime("%Y-%m-%d"), "value": cur}
     except FileNotFoundError:
         cur = inp["cash"]["current"]
     inp["cash"]["value"] = round(0.25 * cur + 0.75 * inp["cash"]["neutral"], 4)

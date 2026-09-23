@@ -102,8 +102,17 @@ def german_cpi() -> pd.Series:
     new = f["CP0000DEM086NEST"].dropna()
     # splice: chain HICP-DE growth onto national CPI after the overlap
     ratio = (old / new).dropna().loc["2020":].mean()
-    spliced = pd.concat([old, new.loc[new.index > old.index[-1]] * ratio])
-    return spliced.sort_index()
+    spliced = pd.concat([old, new.loc[new.index > old.index[-1]] * ratio]).sort_index()
+    # months FRED has not yet published: chain the ECB HICP for Germany
+    try:
+        ecb = ecb_series("ecb_hicp.csv", "ICP.M.DE.")
+        ecb.index = _me(ecb.index)
+        ext = ecb[ecb.index > spliced.index[-1]]
+        if len(ext) and spliced.index[-1] in ecb.index:
+            spliced = pd.concat([spliced, spliced.iloc[-1] * ext / ecb.loc[spliced.index[-1]]])
+    except (FileNotFoundError, KeyError):
+        pass
+    return spliced
 
 
 def yahoo_monthly(ticker: str) -> pd.Series:
@@ -149,7 +158,15 @@ def build_returns() -> tuple[pd.DataFrame, dict]:
     f = fred_bundle()
     fx = usd_per_eur()
 
-    cash = (f["IR3TIB01DEM156N"].shift(1) / 100.0 / 12.0).dropna().rename("cash")
+    rate = f["IR3TIB01DEM156N"].dropna()
+    # months FRED has not yet published: three-month Euribor (ECB)
+    try:
+        eur = ecb_series("ecb_euribor3m.csv")
+        eur.index = _me(eur.index)
+        rate = pd.concat([rate, eur[eur.index > rate.index[-1]]])
+    except FileNotFoundError:
+        pass
+    cash = (rate.shift(1) / 100.0 / 12.0).dropna().rename("cash")
     bund = constant_maturity_returns(bund_yield_10y(), 10.0).rename("bund")
 
     eq_us = to_eur(french("F-F_Research_Data_Factors_CSV.zip"), fx).rename("eq_us")

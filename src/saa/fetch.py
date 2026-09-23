@@ -23,15 +23,15 @@ ROOT = Path(__file__).resolve().parents[2]
 RAW = ROOT / "data" / "raw"
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"}
 
-FRED_IDS = [
-    "IRLTLT01DEM156N", "IR3TIB01DEM156N", "EXGEUS", "EXUSEU", "DEUCPIALLMINMEI",
-    "CP0000DEM086NEST", "CP0000EZ19M086NEST", "CPIAUCSL", "GS10", "TB3MS", "USREC", "IRLTLT01EZM156N",
-]
+# The other columns of fred_bundle.csv are historical (DM/USD before 1999,
+# discontinued national CPI) and need no refresh.
+FRED_LIVE = ["IR3TIB01DEM156N", "CP0000DEM086NEST"]
 ECB = {
     "ecb_yc_aaa.csv": "YC/B.U2.EUR.4F.G_N_A.SV_C_YM.SR_1Y+SR_2Y+SR_5Y+SR_10Y",
     "ecb_euribor3m.csv": "FM/M.U2.EUR.RT.MM.EURIBOR3MD_.HSTA",
     "ecb_hicp.csv": "ICP/M.DE+U2.N.000000.4.INX",
     "ecb_eurusd.csv": "EXR/M.USD.EUR.SP00.E",
+    "ecb_estr.csv": "EST/B.EU000A2X2A25.WT",
 }
 FRENCH = ["F-F_Research_Data_Factors_CSV.zip", "Europe_3_Factors_CSV.zip",
           "Emerging_5_Factors_CSV.zip", "Developed_ex_US_3_Factors_CSV.zip"]
@@ -40,14 +40,14 @@ YAHOO = ["IEAC.L", "EUNH.DE", "EXSA.DE", "SXR8.DE", "EEM", "IEMM.AS", "GC=F",
 ISHARES_IEAC = "https://www.ishares.com/uk/individual/en/products/251726/ishares-euro-corporate-bond-ucits-etf"
 
 
-def get(url: str, **kw) -> requests.Response:
-    for attempt in range(3):
+def get(url: str, attempts: int = 3, read_timeout: int = 90, **kw) -> requests.Response:
+    for attempt in range(attempts):
         try:
-            r = requests.get(url, headers=UA, timeout=(10, 90), **kw)
+            r = requests.get(url, headers=UA, timeout=(10, read_timeout), **kw)
             r.raise_for_status()
             return r
         except requests.RequestException:
-            if attempt == 2:
+            if attempt == attempts - 1:
                 raise
             time.sleep(3 * (attempt + 1))
     raise RuntimeError("unreachable")
@@ -60,18 +60,27 @@ def save(name: str, content: bytes, must_contain: bytes | None = None, min_bytes
 
 
 def fred() -> None:
-    """One request per series: the combined request times out on FRED."""
+    """Series that still update: German three-month rate and HICP Germany.
+    FRED answers slowly from some cloud networks, so each series gets two
+    short attempts; columns that fail keep their previous values. Missing
+    months are bridged in the build with Euribor and ECB HICP data."""
     import pandas as pd
-    frames = []
-    for sid in FRED_IDS:
-        r = get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}")
-        frames.append(pd.read_csv(io.BytesIO(r.content), index_col=0, na_values="."))
-        time.sleep(1)
-    df = pd.concat(frames, axis=1).sort_index()
+    path = RAW / "fred_bundle.csv"
+    df = pd.read_csv(path, index_col=0) if path.exists() else pd.DataFrame()
+    got = 0
+    for sid in FRED_LIVE:
+        try:
+            r = get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}", attempts=2, read_timeout=40)
+            new = pd.read_csv(io.BytesIO(r.content), index_col=0, na_values=".")[sid]
+            df = df.reindex(df.index.union(new.index))
+            df[sid] = new.combine_first(df[sid]) if sid in df else new
+            got += 1
+        except Exception as e:
+            print(f"  fred {sid}: {str(e)[:100]}", flush=True)
+    if not got:
+        raise ValueError("fred: keine Reihe erreichbar")
     df.index.name = "observation_date"
-    save("fred_bundle.csv", df.to_csv().encode(), b"observation_date")
-    save("fred_estr.csv", get("https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECBESTRVOLWGTTRMDMNRT").content,
-         b"observation_date")
+    save("fred_bundle.csv", df.sort_index().to_csv().encode(), b"observation_date")
 
 
 def ecb() -> None:
@@ -168,8 +177,8 @@ def ishares_credit() -> None:
     (RAW / "credit_ytm.json").write_text(json.dumps(out))
 
 
-SOURCES = [("FRED", fred), ("EZB", ecb), ("Bundesbank", bundesbank), ("French", french),
-           ("Shiller/Gold", github_datasets), ("Yahoo", yahoo), ("iShares", ishares_credit)]
+SOURCES = [("EZB", ecb), ("Bundesbank", bundesbank), ("French", french),
+           ("Shiller/Gold", github_datasets), ("Yahoo", yahoo), ("iShares", ishares_credit), ("FRED", fred)]
 
 
 def main() -> int:
