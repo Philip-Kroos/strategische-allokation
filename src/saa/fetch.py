@@ -70,7 +70,7 @@ def fred() -> None:
     got = 0
     for sid in FRED_LIVE:
         try:
-            r = get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}", attempts=2, read_timeout=40)
+            r = get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}", attempts=1, read_timeout=45)
             new = pd.read_csv(io.BytesIO(r.content), index_col=0, na_values=".")[sid]
             df = df.reindex(df.index.union(new.index))
             df[sid] = new.combine_first(df[sid]) if sid in df else new
