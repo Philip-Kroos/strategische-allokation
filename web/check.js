@@ -89,7 +89,7 @@
 
   function drawSignals() {
     const tb = document.querySelector("#tbl-sig tbody");
-    document.getElementById("sig-cap").textContent = `Signale zum ${monthName(SGN.as_of)}, Skala −1 bis +1. Quoten für das Referenzrisiko von ${pct(REFVOL)} Volatilität.`;
+    document.getElementById("sig-cap").textContent = `Signale zum ${monthName(SGN.as_of)}, Skala −1 bis +1. Quoten für das Referenzrisiko von ${pct(REFVOL)} Volatilität. Strategisch: aus den Zehnjahresrenditen, höchstens ±10 Prozentpunkte vom Referenzportfolio, daher etwas enger als in Abschnitt 6.`;
     tb.innerHTML = K.map((k, i) => {
       const c = CL[k], st = MODEL.strat[i], tt = MODEL.total[i];
       return `<tr><td><span class="sw" style="background:${color(k)}"></span>${name(k)}</td>
