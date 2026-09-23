@@ -2,3 +2,4 @@ numpy>=1.26
 pandas>=2.2
 statsmodels>=0.14
 requests>=2.31
+yfinance
