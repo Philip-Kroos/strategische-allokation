@@ -1,8 +1,10 @@
 # Strategische Allokation für den Euro-Anleger
 
-Ein Arbeitsmodell für die strategische Asset-Allokation aus Sicht eines Euro-Anlegers:
-Kapitalmarktannahmen auf zehn Jahre, Portfoliokonstruktion unter Nebenbedingungen,
-Vermögensprojektion mit Entnahmen und Stresstests mit regimeabhängigen Korrelationen.
+Ein Arbeitsmodell für die strategische und taktische Asset-Allokation aus Sicht eines Euro-Anlegers.
+Kern ist ein Portfolio-Check: Depot eingeben, Fonds werden in Regionen zerlegt, jede Position erhält
+Plus- und Minuspunkte aus Bewertung und Trend, und das Depot wird mit einem Modellportfolio gleichen
+Risikos verglichen. Darunter liegen Kapitalmarktannahmen auf zehn Jahre, Portfoliokonstruktion unter
+Nebenbedingungen, Vermögensprojektion und Stresstests mit regimeabhängigen Korrelationen.
 
 **Live:** https://philip-kroos.github.io/strategische-allokation/
 
@@ -10,6 +12,8 @@ Vermögensprojektion mit Entnahmen und Stresstests mit regimeabhängigen Korrela
 
 | Baustein | Methode |
 |---|---|
+| Portfolio-Check | Durchschau auf Fonds, Zusatzrisiko für Einzelaktien und enge Indizes, Modellportfolio mit gleichem Risiko und begrenzten aktiven Abweichungen |
+| Taktische Signale | Bewertung (CAPE, Realrendite, Spread, realer Goldpreis) und Trend (12-Monats-Überrendite je Volatilität); Trend-Beimischung seit 1993 getestet: +1,0 % p. a. nach Kosten, Information Ratio 0,69 |
 | Renditeannahmen Aktien | Mittel aus CAPE-Regression (Shiller-Daten 1881–2013, HAC-Standardfehler, Out-of-sample-Test) und Grinold-Kroner-Bausteinen (Dividende, Nettorückkäufe bzw. Verwässerung, reales Gewinnwachstum, teilweise Bewertungsnormalisierung) |
 | Renditeannahmen Anleihen | Startrendite. Empirisch geprüft für Bundesanleihen seit 1972 (R² 0,86) |
 | Risiko | Monatsrenditen in EUR 1990–2026, Ledoit-Wolf-Schrumpfung, Stambaugh-Projektion für kürzere Historien |
@@ -25,7 +29,7 @@ Vermögensprojektion mit Entnahmen und Stresstests mit regimeabhängigen Korrela
 config/inputs.json        Marktinputs mit Quellen (CAPE, Renditen, Dividenden)
 data/raw/                 Rohdaten (FRED, EZB, Bundesbank, Fama-French, Shiller, Gold, ETF-Kurse)
 src/saa/                  Python: Renditereihen, Anleihenmathematik, Bewertung, Risiko, Build
-web/template.html, app.js Oberfläche und Browser-Rechnung (Optimierung, Monte Carlo, Szenarien)
+web/template.html, app.js, check.js  Oberfläche und Browser-Rechnung (Optimierung, Portfolio-Check, Monte Carlo, Szenarien)
 docs/index.html           Fertige Seite für GitHub Pages (Daten eingebettet)
 docs/data/model.json      Modelloutput
 ```
