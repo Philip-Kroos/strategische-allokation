@@ -22,7 +22,8 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Daten laden
-        run: PYTHONPATH=src python -m saa.fetch
+        run: PYTHONPATH=src python -u -m saa.fetch
+        timeout-minutes: 25
 
       - name: Modell rechnen und Seite bauen
         run: |
