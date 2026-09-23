@@ -1,0 +1,400 @@
+<title>Euro-Allokationsmodell</title>
+<meta name="description" content="Kapitalmarktannahmen, Portfoliokonstruktion und Stresstests für einen Euro-Anleger. Arbeitsmodell von Philip Kroos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap">
+<style>
+:root{
+  --bg:#ffffff; --panel:#f4f6f9; --ink:#141b26; --ink2:#4a5464; --muted:#768092; --rule:#dce1e8; --rule2:#eceff3;
+  --accent:#1f4e8c; --accent-soft:#e7eef8; --neg:#b42318; --pos:#0f7b3f;
+  --c-cash:#8a94a3; --c-bund:#2a78d6; --c-credit:#1baf7a; --c-eq_eu:#eb6834; --c-eq_us:#4a3aa7; --c-eq_em:#008300; --c-gold:#eda100;
+  --serif:"Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --measure:40rem; --wide:68rem;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#10151c; --panel:#171e28; --ink:#e7ebf1; --ink2:#b2bbc8; --muted:#8792a3; --rule:#2b3544; --rule2:#1f2733;
+    --accent:#86ade3; --accent-soft:#1b2a40; --neg:#f0776b; --pos:#4cc38a;
+    --c-cash:#9aa3b1; --c-bund:#3987e5; --c-credit:#199e70; --c-eq_eu:#d95926; --c-eq_us:#9085e9; --c-eq_em:#2e9e3a; --c-gold:#c98500;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#10151c; --panel:#171e28; --ink:#e7ebf1; --ink2:#b2bbc8; --muted:#8792a3; --rule:#2b3544; --rule2:#1f2733;
+  --accent:#86ade3; --accent-soft:#1b2a40; --neg:#f0776b; --pos:#4cc38a;
+  --c-cash:#9aa3b1; --c-bund:#3987e5; --c-credit:#199e70; --c-eq_eu:#d95926; --c-eq_us:#9085e9; --c-eq_em:#2e9e3a; --c-gold:#c98500;
+}
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; margin:0; padding-inline:20px; -webkit-font-smoothing:antialiased}
+.page{max-width:var(--wide); margin:0 auto; padding-block:48px 80px}
+.prose{max-width:var(--measure)}
+h1,h2,h3{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0}
+h1{font-size:clamp(1.9rem,3.6vw,2.6rem); font-weight:600; letter-spacing:-.01em}
+h2{font-size:1.45rem; font-weight:600; margin-bottom:.6rem}
+h2 .no{font-family:var(--sans); font-weight:500; color:var(--muted); font-size:.95rem; margin-right:.6rem; letter-spacing:.02em}
+h3{font-size:1.05rem; font-weight:600}
+p{margin:0 0 .9rem}
+a{color:var(--accent)}
+.sans{font-family:var(--sans)}
+.small{font-size:.85rem}
+.muted{color:var(--muted)}
+.ink2{color:var(--ink2)}
+.num{font-family:var(--sans); font-variant-numeric:tabular-nums}
+
+/* title block, in the manner of a working paper */
+.masthead{display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; font-family:var(--sans); font-size:.78rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--ink); padding-bottom:.55rem; margin-bottom:2.2rem}
+.byline{font-family:var(--sans); color:var(--ink2); font-size:.95rem; margin-top:.8rem}
+.abstract{margin-top:2rem; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:2.5rem; align-items:start}
+.abstract .label{font-family:var(--sans); font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:.4rem}
+.keyfigs{display:grid; grid-template-columns:1fr 1fr; gap:0; border-top:1px solid var(--rule)}
+.keyfig{padding:.8rem 0 .9rem; border-bottom:1px solid var(--rule)}
+.keyfig:nth-child(odd){padding-right:1rem; border-right:1px solid var(--rule)}
+.keyfig:nth-child(even){padding-left:1rem}
+.keyfig .v{font-family:var(--sans); font-size:1.65rem; font-weight:500; font-variant-numeric:tabular-nums; line-height:1.1}
+.keyfig .k{font-family:var(--sans); font-size:.8rem; color:var(--ink2); margin-top:.25rem; line-height:1.35}
+
+section{margin-top:4rem}
+.sec-head{border-top:1px solid var(--rule); padding-top:1.2rem; margin-bottom:1.2rem}
+
+/* figures */
+figure{margin:1.6rem 0 0}
+figcaption{font-family:var(--sans); font-size:.82rem; color:var(--ink2); margin-top:.5rem; line-height:1.45; max-width:var(--measure)}
+figcaption b{color:var(--ink); font-weight:600}
+.fig-title{font-family:var(--sans); font-size:.85rem; font-weight:600; margin-bottom:.35rem}
+.fig-title .muted{font-weight:400}
+.chart{width:100%; position:relative}
+.chart svg{display:block; width:100%; height:auto; overflow:visible}
+.grid2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:2.2rem}
+svg text{font-family:var(--sans); fill:var(--muted); font-size:11px}
+svg .lbl{fill:var(--ink2)}
+svg .lbl-strong{fill:var(--ink); font-weight:600}
+svg .grid{stroke:var(--rule2); stroke-width:1}
+svg .axis{stroke:var(--rule); stroke-width:1}
+svg .zero{stroke:var(--muted); stroke-width:1}
+
+/* tables */
+.tablewrap{overflow-x:auto; margin-top:1.2rem}
+table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:.86rem; font-variant-numeric:tabular-nums}
+caption{text-align:left; font-weight:600; font-size:.85rem; padding-bottom:.5rem; color:var(--ink)}
+caption .muted{font-weight:400}
+th{font-weight:500; color:var(--muted); text-align:right; padding:.45rem .6rem; border-bottom:1px solid var(--ink); white-space:nowrap; font-size:.78rem}
+td{padding:.5rem .6rem; text-align:right; border-bottom:1px solid var(--rule2); white-space:nowrap}
+th:first-child,td:first-child{text-align:left; padding-left:0}
+tbody tr:last-child td{border-bottom:1px solid var(--rule)}
+.sw{display:inline-block; width:.62rem; height:.62rem; border-radius:2px; margin-right:.5rem; vertical-align:baseline}
+td input.cma{width:4.6rem; font:inherit; text-align:right; padding:.15rem .3rem; border:1px solid var(--accent); border-radius:3px; background:var(--accent-soft); color:var(--ink)}
+.derive{text-align:left; color:var(--ink2); white-space:normal; min-width:16rem; line-height:1.4}
+.neg{color:var(--neg)} .pos{color:var(--pos)}
+
+/* controls */
+.controls{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1.4rem 2rem; background:var(--panel); padding:1.2rem 1.3rem 1.3rem; border-radius:6px; margin-top:1.4rem; font-family:var(--sans)}
+.ctl label{display:flex; justify-content:space-between; gap:.5rem; font-size:.82rem; color:var(--ink2); margin-bottom:.35rem}
+.ctl label output{color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums}
+.ctl .hint{font-size:.74rem; color:var(--muted); margin-top:.35rem; line-height:1.35}
+input[type=range]{width:100%; accent-color:var(--accent)}
+.seg{display:flex; border:1px solid var(--rule); border-radius:5px; overflow:hidden; background:var(--bg)}
+.seg button{flex:1; font:inherit; font-size:.78rem; padding:.42rem .3rem; border:0; background:transparent; color:var(--ink2); cursor:pointer; line-height:1.2}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--accent); color:var(--bg); font-weight:600}
+.btn{font-family:var(--sans); font-size:.8rem; border:1px solid var(--rule); background:var(--bg); color:var(--ink); padding:.35rem .7rem; border-radius:4px; cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn[aria-pressed="true"]{border-color:var(--accent); background:var(--accent-soft)}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.numin{width:100%; font:inherit; font-size:.9rem; padding:.35rem .5rem; border:1px solid var(--rule); border-radius:4px; background:var(--bg); color:var(--ink); font-variant-numeric:tabular-nums}
+
+.stats{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0; margin-top:1.4rem; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); font-family:var(--sans)}
+.stat{padding:.75rem .9rem .8rem 0}
+.stat+.stat{padding-left:.9rem; border-left:1px solid var(--rule2)}
+.stat .v{font-size:1.3rem; font-weight:500; font-variant-numeric:tabular-nums}
+.stat .v small{font-size:.78rem; color:var(--muted); font-weight:400; margin-left:.3rem; white-space:nowrap; display:inline-block}
+.stat .k{font-size:.76rem; color:var(--ink2); line-height:1.3; margin-top:.15rem}
+.pf-grid{display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:2.4rem; margin-top:1.6rem}
+
+.note{font-family:var(--sans); font-size:.8rem; color:var(--ink2); border-left:2px solid var(--rule); padding-left:.8rem; margin-top:1rem; max-width:var(--measure)}
+ol.fn{font-family:var(--sans); font-size:.8rem; color:var(--ink2); padding-left:1.2rem; max-width:var(--measure)}
+ol.fn li{margin-bottom:.35rem}
+sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
+.method h3{margin:1.6rem 0 .4rem}
+.method ul{padding-left:1.2rem; margin:.2rem 0 1rem}
+.method li{margin-bottom:.35rem}
+.foot{margin-top:4rem; border-top:1px solid var(--ink); padding-top:1rem; font-family:var(--sans); font-size:.78rem; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:.8rem}
+
+#tip{position:fixed; pointer-events:none; z-index:10; background:var(--ink); color:var(--bg); font-family:var(--sans); font-size:.76rem; line-height:1.35; padding:.4rem .55rem; border-radius:4px; max-width:260px; opacity:0; transition:opacity .08s}
+#tip.on{opacity:1}
+#tip b{font-weight:600}
+
+@media (max-width:860px){
+  .abstract,.grid2,.pf-grid{grid-template-columns:1fr}
+  .controls{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat,.stat+.stat{padding:.7rem .8rem .7rem 0; border-left:0}
+  .stat:nth-child(even){padding-left:.8rem; border-left:1px solid var(--rule2)}
+  body{font-size:16px}
+}
+@media (max-width:440px){ body{padding-inline:16px} .keyfig .v{font-size:1.35rem} }
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+
+/* portfolio check */
+.pc-wrap{background:var(--panel); border-radius:6px; padding:1rem 1.2rem 1.1rem; margin-top:1.2rem; font-family:var(--sans)}
+.pc-head,.pc-row{display:grid; grid-template-columns:minmax(0,2.2fr) minmax(0,1.6fr) 6.5rem 2rem; gap:.6rem; align-items:center}
+.pc-head{color:var(--muted); font-size:.76rem; padding-bottom:.3rem}
+.pc-row{padding:.3rem 0}
+.pc-row select,.pc-row input{width:100%; font:inherit; font-size:.88rem; padding:.38rem .5rem; border:1px solid var(--rule); border-radius:4px; background:var(--bg); color:var(--ink)}
+.pc-row input.w{text-align:right; font-variant-numeric:tabular-nums}
+.pc-row .det{display:flex; gap:.4rem}
+.pc-row .rm{border:0; background:transparent; color:var(--muted); font-size:1.1rem; cursor:pointer; line-height:1}
+.pc-row .rm:hover{color:var(--neg)}
+.pc-actions{display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-top:.7rem}
+#pc-sum{margin-left:auto}
+.pc-verdict{margin-top:1.6rem; font-family:var(--sans)}
+.pc-verdict h3{font-family:var(--serif); font-size:1.2rem; margin-bottom:.5rem}
+.pos-list{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-top:1.4rem}
+.pos-card{border:1px solid var(--rule); border-radius:6px; padding:.9rem 1rem 1rem; font-family:var(--sans); font-size:.86rem; background:var(--bg)}
+.pos-card .t{display:flex; justify-content:space-between; gap:.6rem; align-items:baseline; margin-bottom:.15rem}
+.pos-card .t b{font-size:.95rem}
+.pos-card .sub{color:var(--muted); font-size:.76rem; margin-bottom:.55rem}
+.pos-card ul{list-style:none; padding:0; margin:.2rem 0 0}
+.pos-card li{padding-left:1.1rem; position:relative; margin-bottom:.3rem; line-height:1.4; color:var(--ink2)}
+.pos-card li::before{position:absolute; left:0; font-weight:600}
+.pos-card li.p::before{content:"+"; color:var(--pos)}
+.pos-card li.m::before{content:"−"; color:var(--neg)}
+.pos-card li.i::before{content:"·"; color:var(--muted)}
+.pill{display:inline-block; font-family:var(--sans); font-size:.72rem; font-weight:600; padding:.12rem .5rem; border-radius:999px; white-space:nowrap; border:1px solid currentColor}
+.pill.up{color:var(--pos)} .pill.dn{color:var(--neg)} .pill.nt{color:var(--muted)}
+.bar{display:inline-block; position:relative; width:5.5rem; height:.5rem; background:var(--rule2); border-radius:2px; vertical-align:middle}
+.bar i{position:absolute; top:0; bottom:0; border-radius:2px}
+.bar::after{content:""; position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--muted)}
+.warn{border-left:2px solid var(--neg); padding-left:.8rem; margin-top:.8rem; font-family:var(--sans); font-size:.84rem; color:var(--ink2)}
+@media (max-width:860px){ .pos-list{grid-template-columns:1fr} .pc-head{display:none} .pc-row{grid-template-columns:1fr 5.5rem 2rem; row-gap:.35rem} .pc-row .det{grid-column:1 / -1; grid-row:2} }
+</style>
+
+<div class="page">
+  <div class="masthead"><span>Arbeitsmodell · Strategische und taktische Asset-Allokation</span><span id="asof">Stand</span></div>
+
+  <header>
+    <h1>Strategische Allokation für den Euro-Anleger</h1>
+    <div class="byline">Philip Kroos · Portfolio-Check, taktische Signale, Kapitalmarktannahmen und Stresstests</div>
+  </header>
+
+  <div class="abstract">
+    <div class="prose">
+      <div class="label">Kurzfassung</div>
+      <p>Das Modell beantwortet eine praktische Frage: Passt ein Depot zur aktuellen Marktlage, und wo lohnt eine Umschichtung? Es bewertet sieben Anlageklassen nach Bewertung und Trend, leitet daraus Über- und Untergewichtungen ab und prüft ein eingegebenes Depot gegen ein Modellportfolio mit gleichem Risiko.</p>
+      <p>Die Grundlage sind erwartete Renditen über zehn Jahre aus Bewertungen und Startrenditen. Sie fallen nach über einem Jahrzehnt hoher Aktienrenditen bescheiden aus. Seit 2022 bewegen sich zudem Aktien und Bundesanleihen wieder gleichgerichtet, Anleihen sichern also schlechter ab. Beides fließt in die Einschätzung ein.</p>
+      <p class="small sans ink2">Alle Eingaben, Annahmen und Szenarien sind veränderbar. Die Rechnung läuft vollständig im Browser, es werden keine Daten übertragen.</p>
+    </div>
+    <div>
+      <div class="label">Auf einen Blick</div>
+      <div class="keyfigs" id="keyfigs"></div>
+    </div>
+  </div>
+
+  <section id="check">
+    <div class="sec-head"><h2><span class="no">1</span>Portfolio-Check</h2></div>
+    <div class="prose">
+      <p>Positionen mit Gewicht eintragen, etwa einen MSCI-World-ETF, Anleihen oder eine Einzelaktie. Das Modell zerlegt Fonds in ihre Regionen, bewertet jede Position mit den Signalen aus Abschnitt 2 und vergleicht das Depot mit einem Modellportfolio gleichen Risikos.</p>
+    </div>
+    <div class="pc-wrap">
+      <div class="pc-head sans small"><span>Position</span><span>Details</span><span>Gewicht %</span><span></span></div>
+      <div id="pc-rows"></div>
+      <div class="pc-actions">
+        <button type="button" class="btn" id="pc-add">Position hinzufügen</button>
+        <span class="sans small muted">Beispiele:</span>
+        <button type="button" class="btn" data-example="welt">Welt-ETF plus Anleihen</button>
+        <button type="button" class="btn" data-example="usa">US-lastig mit Einzelaktien</button>
+        <button type="button" class="btn" data-example="defensiv">Defensiv</button>
+        <span class="sans small" id="pc-sum"></span>
+      </div>
+    </div>
+    <div id="pc-out"></div>
+  </section>
+
+  <section id="signale">
+    <div class="sec-head"><h2><span class="no">2</span>Taktische Signale</h2></div>
+    <div class="prose">
+      <p>Zwei Signale je Anlageklasse. <b>Bewertung</b> misst, wie teuer eine Anlage gegenüber ihrer eigenen Geschichte oder einem fairen Wert ist. Sie erklärt Renditen über Jahre, kaum über Monate. <b>Trend</b> misst die Überrendite der letzten zwölf Monate über Geldmarkt, skaliert mit der Schwankung. Er wirkt über Monate und versagt an Wendepunkten. Die Kombination gleicht beide Schwächen teilweise aus.</p>
+    </div>
+    <div class="tablewrap">
+      <table id="tbl-sig">
+        <caption>Tabelle 1 <span class="muted" id="sig-cap"></span></caption>
+        <thead><tr><th>Anlageklasse</th><th style="text-align:center">Bewertung</th><th style="text-align:center">Trend</th><th style="text-align:center">Gesamt</th><th>Einstufung</th><th>Referenz</th><th>Taktisch</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="grid2" style="margin-top:1.8rem">
+      <figure style="margin-top:0">
+        <div class="fig-title">Abbildung 1 <span class="muted">Trend-Beimischung gegenüber dem statischen Referenzportfolio, Wert von 1 € in EUR</span></div>
+        <div class="chart" id="fig-bt"></div>
+      </figure>
+      <div>
+        <div class="tablewrap" style="margin-top:0">
+          <table id="tbl-bt">
+            <caption>Tabelle 2 <span class="muted" id="bt-cap"></span></caption>
+            <thead><tr><th></th><th>Taktisch</th><th>Referenz</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="note" id="bt-note"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1 -->
+  <section id="annahmen">
+    <div class="sec-head"><h2><span class="no">3</span>Kapitalmarktannahmen</h2></div>
+    <div class="prose">
+      <p>Für Anleihen ist die heutige Rendite der beste Schätzer der Rendite der nächsten zehn Jahre. Für Aktien kombiniert das Modell zwei Verfahren zu gleichen Teilen. Das erste ist eine Regression der zehnjährigen Folgerendite auf die zyklisch bereinigte Ertragsrendite (1/CAPE). Das zweite ist eine Bausteinrechnung aus Dividendenrendite, realem Gewinnwachstum und einer teilweisen Normalisierung der Bewertung. Fremdwährungen sind ungesichert. Nach relativer Kaufkraftparität gleicht die Wechselkursbewegung die Inflationsdifferenz aus, sodass die Euro-Rendite gleich der realen Rendite plus Euro-Inflation ist.</p>
+    </div>
+    <figure>
+      <div class="fig-title">Abbildung 2 <span class="muted">Erwartete Rendite p. a. über 10 Jahre (Punkt, mit Bandbreite ±1 Standardabweichung) gegenüber der realisierten Rendite 1990–2026 (Ring), nominal in EUR</span></div>
+      <div class="chart" id="fig-cma"></div>
+    </figure>
+    <div class="tablewrap">
+      <table id="tbl-cma">
+        <caption>Tabelle 3 <span class="muted">Annahmen je Anlageklasse. Volatilität und Korrelationen aus Monatsrenditen 1990–2026.</span></caption>
+        <thead><tr><th>Anlageklasse</th><th>Erwartet nominal</th><th>Erwartet real</th><th>Bandbreite</th><th>Volatilität</th><th>Historisch 1990–2026</th><th>Herleitung</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div style="display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.8rem; align-items:center">
+      <button class="btn" id="btn-edit" aria-pressed="false">Eigene Annahmen eintragen</button>
+      <button class="btn" id="btn-reset" hidden>Modellwerte wiederherstellen</button>
+      <span class="small sans muted" id="edit-hint" hidden>Werte in Prozent p. a. Portfolio, Projektion und Stresstests rechnen sofort neu.</span>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="evidenz">
+    <div class="sec-head"><h2><span class="no">4</span>Evidenz hinter den Annahmen</h2></div>
+    <div class="prose">
+      <p>Beide Schätzer haben einen langen empirischen Nachweis. Die Grafiken zeigen, wie gut die Startbewertung die Rendite des folgenden Jahrzehnts erklärt hat, und wo die Märkte heute stehen.</p>
+    </div>
+    <div class="grid2">
+      <figure>
+        <div class="fig-title">Abbildung 3 <span class="muted">CAPE und reale Aktienrendite der Folgedekade, USA</span></div>
+        <div class="chart" id="fig-cape"></div>
+        <figcaption id="cap-cape"></figcaption>
+      </figure>
+      <figure>
+        <div class="fig-title">Abbildung 4 <span class="muted">Startrendite und Rendite der Folgedekade, Bundesanleihen 10 J.</span></div>
+        <div class="chart" id="fig-bond"></div>
+        <figcaption id="cap-bond"></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="regime">
+    <div class="sec-head"><h2><span class="no">5</span>Das Korrelationsregime</h2></div>
+    <div class="prose">
+      <p>Die Absicherungswirkung von Staatsanleihen ist kein Naturgesetz. Sie hängt davon ab, ob Wachstums- oder Inflationsschocks die Märkte treiben. Bei Wachstumsschocks fallen Aktien und Zinsen gemeinsam, Anleihen steigen. Bei Inflationsschocks steigen die Zinsen, und beide Anlageklassen verlieren. So war es in den 1990er Jahren und wieder seit 2022.</p>
+      <p>Das Modell teilt die Stichprobe am Vorzeichen der rollierenden 36-Monats-Korrelation und schätzt für beide Regime eigene Kovarianzmatrizen. Der Regler im nächsten Abschnitt wählt, mit welcher gerechnet wird.</p>
+    </div>
+    <figure>
+      <div class="fig-title">Abbildung 5 <span class="muted">Rollierende 36-Monats-Korrelation der Monatsrenditen, Aktien Europa gegenüber Bundesanleihen 10 J.</span></div>
+      <div class="chart" id="fig-corr"></div>
+      <figcaption id="cap-corr"></figcaption>
+    </figure>
+  </section>
+
+  <!-- 4 -->
+  <section id="portfolio">
+    <div class="sec-head"><h2><span class="no">6</span>Strategisches Portfolio</h2></div>
+    <div class="prose">
+      <p>Die Gewichte maximieren die erwartete Rendite bei gegebenem Risikobudget, mit Ober- und Untergrenzen je Anlageklasse. Reine Mittelwert-Varianz-Optimierung reagiert extrem auf kleine Änderungen der Renditeannahmen. Das Modell verankert die Annahmen deshalb im Stil von Black und Litterman an einem Referenzportfolio. Der dritte Regler bestimmt, wie stark die Bewertungssignale gegenüber diesem Anker zählen.</p>
+    </div>
+    <div class="controls">
+      <div class="ctl">
+        <label for="in-vol">Risikobudget (Volatilität p. a.) <output id="out-vol"></output></label>
+        <input type="range" id="in-vol" min="3" max="15" step="0.5" value="8">
+        <div class="hint" id="hint-vol"></div>
+      </div>
+      <div class="ctl">
+        <label>Korrelationsregime</label>
+        <div class="seg" id="seg-regime" role="group" aria-label="Korrelationsregime">
+          <button type="button" data-v="pos" aria-pressed="true">Inflation</button>
+          <button type="button" data-v="all" aria-pressed="false">Gesamt</button>
+          <button type="button" data-v="neg" aria-pressed="false">Wachstum</button>
+        </div>
+        <div class="hint" id="hint-regime"></div>
+      </div>
+      <div class="ctl">
+        <label for="in-conf">Gewicht der Bewertungssignale <output id="out-conf"></output></label>
+        <input type="range" id="in-conf" min="0" max="100" step="5" value="25">
+        <div class="hint">0 % hält das Referenzportfolio. 100 % folgt allein den Kapitalmarktannahmen.</div>
+      </div>
+    </div>
+
+    <div class="stats" id="pf-stats"></div>
+
+    <div class="pf-grid">
+      <figure style="margin-top:0">
+        <div class="fig-title">Abbildung 6 <span class="muted">Gewichte und Risikobeiträge. Striche markieren das Referenzportfolio.</span></div>
+        <div class="chart" id="fig-weights"></div>
+      </figure>
+      <figure style="margin-top:0">
+        <div class="fig-title">Abbildung 7 <span class="muted">Effizienzlinie unter den Nebenbedingungen</span></div>
+        <div class="chart" id="fig-frontier"></div>
+      </figure>
+    </div>
+    <p class="note" id="pf-note"></p>
+  </section>
+
+  <!-- 5 -->
+  <section id="projektion">
+    <div class="sec-head"><h2><span class="no">7</span>Vermögensprojektion</h2></div>
+    <div class="prose">
+      <p>Ein Familienvermögen wird selten nur angelegt. Es finanziert Entnahmen und soll real erhalten bleiben. Die Simulation zieht Jahresrenditen des gewählten Portfolios und berücksichtigt dabei auch, dass die Renditeannahmen selbst unsicher sind. Die Entnahme ist als fester, inflationsindexierter Betrag modelliert.</p>
+    </div>
+    <div class="controls">
+      <div class="ctl"><label for="in-w0">Anfangsvermögen (EUR)</label><input class="numin" id="in-w0" type="text" inputmode="numeric" value="10.000.000"></div>
+      <div class="ctl"><label for="in-wd">Entnahme p. a. in % des Anfangsvermögens <output id="out-wd"></output></label><input type="range" id="in-wd" min="0" max="6" step="0.25" value="3"></div>
+      <div class="ctl"><label for="in-h">Horizont <output id="out-h"></output></label><input type="range" id="in-h" min="5" max="30" step="1" value="20"></div>
+    </div>
+    <div class="stats" id="mc-stats"></div>
+    <figure>
+      <div class="fig-title">Abbildung 8 <span class="muted">Reales Vermögen nach Entnahmen und 0,5 % Kosten p. a., in Kaufkraft von heute. Bänder 5–95 % und 25–75 %, Linie Median.</span></div>
+      <div class="chart" id="fig-fan"></div>
+    </figure>
+  </section>
+
+  <!-- 6 -->
+  <section id="stress">
+    <div class="sec-head"><h2><span class="no">8</span>Stresstests</h2></div>
+    <div class="prose">
+      <p>Die historischen Szenarien spielen das Portfolio mit monatlicher Wiederanlage durch tatsächliche Krisen. Die hypothetischen Szenarien setzen einen Schock und leiten die Reaktion der übrigen Anlageklassen aus der Kovarianzmatrix ab, getrennt nach Regime. Der Vergleich zeigt, wie viel vom Ausgang eines Schocks am Korrelationsregime hängt.</p>
+    </div>
+    <div class="tablewrap">
+      <table id="tbl-hist">
+        <caption>Tabelle 4 <span class="muted">Historische Krisen, kumulierte Rendite im Zeitraum</span></caption>
+        <thead></thead><tbody></tbody>
+      </table>
+    </div>
+    <div class="tablewrap" style="margin-top:2rem">
+      <table id="tbl-hyp">
+        <caption>Tabelle 5 <span class="muted">Hypothetische Schocks, bedingte erwartete Portfolioreaktion</span></caption>
+        <thead></thead><tbody></tbody>
+      </table>
+    </div>
+    <p class="note" id="stress-note"></p>
+  </section>
+
+  <!-- 7 -->
+  <section id="methodik" class="method">
+    <div class="sec-head"><h2><span class="no">9</span>Methodik und Grenzen</h2></div>
+    <div class="prose" id="method-body"></div>
+  </section>
+
+  <div class="foot">
+    <span>Philip Kroos · Daten: Deutsche Bundesbank, EZB, FRED, Kenneth R. French Data Library, Robert Shiller, Weltbank, Börsenkurse. Keine Anlageberatung.</span>
+    <span id="foot-build"></span>
+  </div>
+</div>
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script id="model" type="application/json">__MODEL__</script>
+<script>
+__APP__
+</script>
