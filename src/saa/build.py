@@ -17,11 +17,12 @@ from .cma import build_cma
 from .risk import nearest_psd, rolling_stock_bond_corr, stambaugh_cov
 from .valuation import fit_cape_regression, real_total_return_index
 from . import signals as SG
+from .market import live_inputs
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "docs" / "data" / "model.json"
 
-SAMPLE = ("1990-08-31", "2026-07-31")
+SAMPLE_START = "1990-08-31"
 LONG = ["cash", "bund", "eq_eu", "eq_us", "eq_em", "gold"]
 ORDER = [k for k, _ in R.ASSETS]
 NAMES = dict(R.ASSETS)
@@ -126,12 +127,12 @@ def em_usd_from_yahoo() -> pd.Series:
     d = y[y["ticker"] == "EEM"].copy()
     d["m"] = d["date"].dt.to_period("M")
     d = d.drop_duplicates("m").set_index("m")["adjclose"]
-    d = d[d.index < pd.Period("2026-09", "M")]
+    d = d[d.index < R.current_month()]
     d.index = d.index.to_timestamp(how="end").normalize()
     return R.monthly_returns(d)
 
 
-def signal_block(inputs: dict, rets: pd.DataFrame, rc: pd.Series) -> dict:
+def signal_block(inputs: dict, rets: pd.DataFrame, rc: pd.Series, shiller: pd.DataFrame) -> dict:
     yc = R.ecb_series("ecb_yc_aaa.csv", "SR_5Y")
     aaa5 = float(yc.iloc[-1]) / 100
     gold_pct = gold_context()["percentile"]
@@ -141,21 +142,31 @@ def signal_block(inputs: dict, rets: pd.DataFrame, rc: pd.Series) -> dict:
     ex12 = lr.rolling(12).sum().sub(lr["cash"].rolling(12).sum(), axis=0)
     tr = tr_all.iloc[-1]
     out = {"as_of": rets.index[-1].strftime("%Y-%m"), "aaa5": r4(aaa5), "corr_now": r4(float(rc.iloc[-1]), 3),
-           "classes": {}, "backtest": SG.backtest(rets, ORDER), "ref": SG.REF, "tilt": SG.TILT}
+           "classes": {}, "backtest": SG.backtest(rets, ORDER), "ref": SG.REF, "tilt": SG.TILT,
+           "variants": SG.backtest_combined(rets, ORDER, shiller)}
     for k in ORDER:
         v = val[k]
         out["classes"][k] = {
             "val": r4(v["score"], 3), "trend": r4(float(tr[k]), 3),
             "ex12": r4(float(ex12[k].iloc[-1])),
-            "score": r4(0.5 * v["score"] + 0.5 * float(tr[k]), 3),
+            # tactical score = trend only; valuation enters the strategic
+            # weights through the expected returns (see backtest_combined)
+            "score": r4(float(tr[k]), 3),
             "detail": {kk: (r4(x) if isinstance(x, float) else x) for kk, x in v.items() if kk != "score"},
         }
     return out
 
 
+def as_of(inputs: dict) -> str:
+    try:
+        return json.loads((ROOT / "data" / "raw" / "fetch_log.json").read_text())["fetched"]
+    except FileNotFoundError:
+        return inputs["as_of"]
+
+
 def main() -> None:
-    inputs = json.loads((ROOT / "config" / "inputs.json").read_text())
-    inputs["eq_em"]["cape"] = em_cape(inputs["eq_em"])
+    base = json.loads((ROOT / "config" / "inputs.json").read_text())
+    inputs, live = live_inputs(base)
 
     sh = pd.read_csv(ROOT / "data" / "raw" / "shiller.csv", parse_dates=["Date"]).set_index("Date")
     sh.index = sh.index + pd.offsets.MonthEnd(0)
@@ -166,8 +177,9 @@ def main() -> None:
 
     raw, meta = R.build_returns()
     credit_obs = raw["credit"].dropna()
-    rets = raw.loc[SAMPLE[0]:SAMPLE[1]].copy()
-    credit_filled, bf = R.backfill_credit(raw, SAMPLE[0])
+    end = raw[LONG].dropna().index[-1]
+    rets = raw.loc[SAMPLE_START:end].copy()
+    credit_filled, bf = R.backfill_credit(raw, SAMPLE_START)
     rets["credit"] = credit_filled.loc[rets.index]
     assert not rets[ORDER].isna().any().any(), rets.isna().sum()
 
@@ -205,7 +217,9 @@ def main() -> None:
         "meta": {
             "title": "Strategische Allokation für den Euro-Anleger",
             "author": "Philip Kroos",
-            "as_of": inputs["as_of"],
+            "as_of": as_of(inputs),
+            "live": live,
+            "anchors": inputs["anchors"],
             "built": date.today().isoformat(),
             "sample": [rets.index[0].strftime("%Y-%m"), rets.index[-1].strftime("%Y-%m")],
             "inflation": inputs["inflation_eur"],
@@ -254,7 +268,7 @@ def main() -> None:
         "gold": gold_context(),
         "stock_bond_corr": [[d.strftime("%Y-%m"), r4(v, 3)] for d, v in rc.items()],
         "stress": stress,
-        "signals": signal_block(inputs, rets, rc),
+        "signals": signal_block(inputs, rets, rc, sh),
         "validation": validation(raw),
         "history": {
             "start": hist_start.strftime("%Y-%m"),

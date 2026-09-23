@@ -11,10 +11,11 @@ Bewertung (slow): how cheap the asset is relative to its own history or to a
 Trend (fast): 12-month return over cash divided by 36-month volatility,
     i.e. a time-series momentum signal. Clipped at +/-1.5 and rescaled.
 
-The tactical score is the average of both. Valuation has little power over
-months, trend has little power over decades, which is why they are combined.
-Only the trend signal has a full monthly history for every asset class, so
-the backtest tests the trend overlay alone and says so.
+Valuation and trend work on different horizons. Tested as a monthly tilt
+(backtest_combined, no look-ahead), valuation lost money from 1993 on while
+trend added about one percentage point a year. The model therefore uses
+valuation only for the strategic weights, through the ten-year expected
+returns, and trend alone for the tactical tilt.
 """
 from __future__ import annotations
 
@@ -104,3 +105,65 @@ def backtest(rets: pd.DataFrame, order: list) -> dict:
                  for d, a, b in zip(r.index[::3], path_t.iloc[::3], path_r.iloc[::3])],
         "tilts": TILT, "cost": COST,
     }
+
+
+# --------------------------------------------------------------------------
+# Valuation history without look-ahead: every fair value and percentile uses
+# only data available at that month.
+
+def valuation_history(index: pd.DatetimeIndex, shiller: pd.DataFrame) -> pd.DataFrame:
+    out = pd.DataFrame(0.0, index=index, columns=["eq_us", "bund", "gold"])
+
+    # US: CAPE against the expanding median since 1950
+    cape = shiller["PE10"].replace(0, np.nan)
+    price = shiller["SP500"]
+    last = cape.last_valid_index()
+    # after the last published CAPE the ratio moves with the price, while the
+    # ten-year earnings average grows at its trailing ten-year rate
+    e10 = (price / cape).dropna()
+    g = (e10.iloc[-1] / e10.iloc[-121]) ** (1 / 10) - 1
+    ext = price.loc[last:].iloc[1:]
+    months = np.arange(1, len(ext) + 1)
+    cape_ext = pd.Series(ext.values / (e10.iloc[-1] * (1 + g) ** (months / 12)), index=ext.index)
+    cape_full = pd.concat([cape.dropna(), cape_ext])
+    fair = cape_full.loc["1950":].expanding(120).median()
+    s_us = np.clip(np.log(fair / cape_full) / np.log(1.5), -1, 1)
+    out["eq_us"] = s_us.reindex(index).ffill()
+
+    # Bunds: real yield against its expanding history since 1975
+    y = R.bund_yield_10y()
+    cpi = R.german_cpi()
+    real = (y - cpi.pct_change(12) * 100).dropna().loc["1975":]
+    pct = real.expanding(120).apply(lambda x: (x <= x[-1]).mean(), raw=True)
+    out["bund"] = (2 * pct - 1).reindex(index).ffill()
+
+    # Gold: real price percentile since 1975
+    g_eur = R.gold_usd() / R.usd_per_eur()
+    rg = (g_eur / cpi).dropna().loc["1975":]
+    pg = rg.expanding(120).apply(lambda x: (x <= x[-1]).mean(), raw=True)
+    out["gold"] = (1 - 2 * pg).reindex(index).ffill()
+    return out.fillna(0.0)
+
+
+def backtest_combined(rets: pd.DataFrame, order: list, shiller: pd.DataFrame) -> dict:
+    tr = trend_score(rets[order])
+    val = valuation_history(rets.index, shiller)
+    comb = tr.copy()
+    for k in val.columns:
+        comb[k] = 0.5 * tr[k] + 0.5 * val[k]
+    out = {}
+    for label, sc in (("trend", tr), ("kombiniert", comb), ("bewertung", val.reindex(columns=order).fillna(0.0))):
+        s = sc.shift(1).dropna()
+        s = s.loc[tr.shift(1).dropna().index.intersection(s.index)]
+        r = rets.loc[s.index, order]
+        w = overlay_weights(s, order)
+        turn = w.diff().abs().sum(axis=1).fillna(0)
+        rt = (w * r).sum(axis=1) - COST * turn
+        rr = (pd.DataFrame([REF] * len(r), index=r.index)[order] * r).sum(axis=1)
+        d = rt - rr
+        v = (1 + rt).cumprod()
+        out[label] = {"excess_pa": float(d.mean() * 12), "te": float(d.std() * np.sqrt(12)),
+                      "ir": float(d.mean() / d.std() * np.sqrt(12)), "t_stat": float(d.mean() / d.std() * np.sqrt(len(d))),
+                      "mdd": float((v / v.cummax() - 1).min()),
+                      "start": r.index[0].strftime("%Y-%m"), "end": r.index[-1].strftime("%Y-%m")}
+    return out

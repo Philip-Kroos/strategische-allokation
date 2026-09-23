@@ -8,6 +8,7 @@ Deutsche Mark at the irrevocable conversion rate of 1.95583 DEM per EUR.
 from __future__ import annotations
 
 import io
+import json
 import re
 import zipfile
 from pathlib import Path
@@ -105,21 +106,6 @@ def german_cpi() -> pd.Series:
     return spliced.sort_index()
 
 
-def yahoo_sequential(ticker: str) -> pd.Series:
-    for line in (RAW / "yahoo_monthly_sequential.txt").read_text().splitlines():
-        if line.startswith(ticker + " "):
-            parts = line.split()
-            # Yahoo stamps monthly bars in UTC, which moves them one month back
-            # for European listings, and appends the latest quote as an extra
-            # bar. Verified against month-end ECB AAA yields (corr 0.88 after
-            # the shift, ~0 before) and the March-2020 credit drawdown.
-            start = pd.Period(parts[1], freq="M") + 1
-            vals = np.array(parts[2:-1], dtype=float)
-            idx = pd.period_range(start, periods=len(vals), freq="M").to_timestamp(how="end").normalize()
-            return pd.Series(vals, index=idx, name=ticker)
-    raise KeyError(ticker)
-
-
 def yahoo_monthly(ticker: str) -> pd.Series:
     """Month-end adjusted closes from the Yahoo chart API export.
 
@@ -133,10 +119,19 @@ def yahoo_monthly(ticker: str) -> pd.Series:
     per = per.where(df["date"].dt.day < 25, per + 1)
     df["m"] = per
     df = df.drop_duplicates("m", keep="first").set_index("m")["adjclose"].astype(float)
-    df = df[df.index < pd.Period("2026-09", "M")]
+    df = df[df.index < current_month()]
     s = df.copy()
     s.index = s.index.to_timestamp(how="end").normalize()
     return s.rename(ticker)
+
+
+def current_month() -> pd.Period:
+    """The running month, whose bar is still incomplete."""
+    try:
+        log = json.loads((RAW / "fetch_log.json").read_text())
+        return pd.Period(log["fetched"][:7], "M")
+    except (FileNotFoundError, KeyError):
+        return pd.Timestamp.now(tz="UTC").tz_localize(None).to_period("M")
 
 
 def monthly_returns(level: pd.Series) -> pd.Series:
@@ -175,10 +170,7 @@ def build_returns() -> tuple[pd.DataFrame, dict]:
     g_usd = pd.concat([g_avg[g_avg.index < g_eom.index[0]], g_eom]).sort_index()
     gold = to_eur(g_usd, fx).rename("gold")
 
-    ieac = yahoo_sequential("IEAC.L")
-    credit_obs = ieac.pct_change().dropna()
-    credit_obs = credit_obs.iloc[:-1]          # drop incomplete current month
-    credit_obs.name = "credit"
+    credit_obs = monthly_returns(yahoo_monthly("IEAC.L")).rename("credit")
 
     df = pd.concat([cash, bund, credit_obs, eq_eu, eq_us, eq_em, gold], axis=1)
     meta = {"credit_observed_from": credit_obs.index[0].strftime("%Y-%m")}
