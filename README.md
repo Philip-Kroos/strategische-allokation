@@ -8,6 +8,8 @@ Nebenbedingungen, Vermögensprojektion und Stresstests mit regimeabhängigen Kor
 
 **Live:** https://philip-kroos.github.io/strategische-allokation/
 
+**Arbeitspapier:** [Bewertung für die Strategie, Trend für die Taktik](docs/arbeitspapier.pdf) (2 Seiten, Stand September 2026)
+
 ## Was das Modell macht
 
 | Baustein | Methode |
@@ -32,6 +34,7 @@ src/saa/                  Python: Renditereihen, Anleihenmathematik, Bewertung, 
 web/template.html, app.js, check.js  Oberfläche und Browser-Rechnung (Optimierung, Portfolio-Check, Monte Carlo, Szenarien)
 docs/index.html           Fertige Seite für GitHub Pages (Daten eingebettet)
 docs/data/model.json      Modelloutput
+paper/                    Arbeitspapier: build_paper.py erzeugt paper.html, daraus das PDF
 ```
 
 ## Neu rechnen
