@@ -1,0 +1,101 @@
+{
+  "as_of": "2026-09-22",
+  "inflation_eur": {
+    "value": 0.02,
+    "note": "Durchschnittliche HVPI-Inflation über 10 Jahre. Entspricht dem EZB-Ziel. Der Energiepreisschock im September 2026 hebt die Inflation kurzfristig, ändert den Zehnjahresdurchschnitt aber wenig.",
+    "source": "EZB, geldpolitische Strategie (2021)"
+  },
+  "cash": {
+    "value": 0.023,
+    "band": 0.01,
+    "current": 0.0244,
+    "current_source": "€STR 2,44 % am 21.09.2026 (EZB via FRED, ECBESTRVOLWGTTRMDMNRT)",
+    "neutral": 0.0225,
+    "note": "Pfad vom aktuellen €STR zu einem neutralen Nominalzins von 2,25 % (reale neutrale Rate um 0,25 % plus 2 % Inflation). Mittelwert über 10 Jahre."
+  },
+  "bund": {
+    "yield": 0.035,
+    "band": 0.006,
+    "source": "Bund 10 J. 3,54 % am 15.09.2026 (Euronews), EZB-AAA-Zinsstrukturkurve 10 J. 3,47 % am 21.09.2026",
+    "note": "Für eine Laufzeit von rund 10 Jahren ist die Startrendite der beste einzelne Schätzer der Anleiherendite. Abschnitt 2 zeigt den Zusammenhang für Bundesanleihen seit 1972."
+  },
+  "credit": {
+    "ytm": 0.0413,
+    "loss": 0.003,
+    "band": 0.008,
+    "duration": 4.35,
+    "source": "iShares Core € Corp Bond (IEAC), gewichtete Rendite auf Verfall 4,13 %, Duration 4,35, Stand 21.09.2026",
+    "note": "Abzug von 0,30 % p. a. für Ausfälle und Herabstufungen. Größenordnung aus langfristigen Ausfallstudien für Investment Grade (Ausfallrate unter 0,2 % p. a., Verwertungsquote um 40 %) plus Verluste durch Herabstufungen."
+  },
+  "eq_eu": {
+    "cape": 23.63,
+    "cape_source": "STOXX Europe 600, 30.06.2026 (Siblis Research)",
+    "dy": 0.026,
+    "dy_source": "iShares STOXX Europe 600 (EXSA), Ausschüttungsrendite 12 Monate (justETF, Juli 2026)",
+    "g_real": 0.011,
+    "cape_fair": 17.0,
+    "closure": 0.5,
+    "net_buyback": 0.006,
+    "buyback_source": "Europäische Rückkäufe auf Rekordniveau (Barclays-Tracker, Bloomberg 27.02.2026), brutto grob 1,2 % des Börsenwerts. Netto etwa die Hälfte angesetzt.",
+    "g_source": "Potenzialwachstum Euroraum rund 1 %.",
+    "fair_source": "Annahme unter dem US-Wert wegen Sektormix (mehr Banken, Energie, Grundstoffe)."
+  },
+  "eq_us": {
+    "cape": 35.82,
+    "cape_source": "USA, 30.06.2026 (Siblis Research)",
+    "dy": 0.0105,
+    "dy_source": "S&P 500, 21.09.2026 (GuruFocus)",
+    "g_real": 0.018,
+    "cape_fair": 20.0,
+    "closure": 0.5,
+    "net_buyback": 0.009,
+    "buyback_source": "Brutto-Rückkaufrendite S&P 500 1,79 % (12 Monate bis Sep. 2025, S&P Dow Jones Indices). Netto nach Neuemissionen und Mitarbeiteraktien etwa die Hälfte angesetzt.",
+    "g_source": "Reales Wachstum der Gesamtgewinne nahe dem Potenzialwachstum (CBO: rund 1,8 %).",
+    "fair_source": "Median des US-CAPE seit 1950: 20,9 (Shiller-Daten)."
+  },
+  "eq_em": {
+    "cape": null,
+    "cape_countries": {
+      "Taiwan": [
+        46.44,
+        0.2744
+      ],
+      "Südkorea": [
+        40.76,
+        0.2084
+      ],
+      "China": [
+        18.18,
+        0.2062
+      ],
+      "Indien": [
+        29.64,
+        0.1125
+      ]
+    },
+    "cape_source": "Länder-CAPE 30.06.2026 (Siblis Research), gewichtet mit MSCI-EM-Länderanteilen 31.08.2026 (MSCI Factsheet). Deckt 80 % des Index ab, Aggregation über das gewichtete Ertragsverhältnis.",
+    "dy": 0.0201,
+    "dy_source": "MSCI Emerging Markets, 31.08.2026 (MSCI Factsheet)",
+    "g_real": 0.035,
+    "cape_fair": 16.0,
+    "closure": 0.5,
+    "net_buyback": -0.015,
+    "buyback_source": "Schwellenländer verwässern durch Neuemissionen. Bernstein und Arnott (2003) zeigen eine Lücke von rund 2 % p. a. zwischen Gesamtwirtschaft und Gewinn je Aktie. Angesetzt: −1,5 %.",
+    "g_source": "Potenzialwachstum Schwellenländer rund 3,5 %.",
+    "fair_source": "Annahme, entspricht grob dem langfristigen Mittel des EM-CAPE."
+  },
+  "gold": {
+    "real": -0.005,
+    "band": 0.05,
+    "note": "Gold hat keinen Cashflow. Langfristig folgt der Preis grob der Inflation. Der reale Goldpreis liegt nahe seinem historischen Höchststand. Erb und Harvey (2013) zeigen, dass ein hoher realer Goldpreis mit unterdurchschnittlichen realen Folgerenditen einhergeht. Annahme daher leicht negativ real."
+  },
+  "anchors": {
+    "cape_month": "2026-06",
+    "dy_month": {
+      "eq_us": "2026-09",
+      "eq_eu": "2026-07",
+      "eq_em": "2026-08"
+    },
+    "note": "Stichtage der manuell gepflegten Werte (CAPE, Dividendenrendite). Zwischen den Stichtagen schreibt das Modell sie mit der Kursentwicklung fort. Einmal im Quartal aktualisieren."
+  }
+}
