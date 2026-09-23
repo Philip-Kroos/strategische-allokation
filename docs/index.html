@@ -1,0 +1,1333 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Euro-Allokationsmodell</title>
+<meta name="description" content="Kapitalmarktannahmen, Portfoliokonstruktion und Stresstests für einen Euro-Anleger. Arbeitsmodell von Philip Kroos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap">
+<style>
+:root{
+  --bg:#ffffff; --panel:#f4f6f9; --ink:#141b26; --ink2:#4a5464; --muted:#768092; --rule:#dce1e8; --rule2:#eceff3;
+  --accent:#1f4e8c; --accent-soft:#e7eef8; --neg:#b42318; --pos:#0f7b3f;
+  --c-cash:#8a94a3; --c-bund:#2a78d6; --c-credit:#1baf7a; --c-eq_eu:#eb6834; --c-eq_us:#4a3aa7; --c-eq_em:#008300; --c-gold:#eda100;
+  --serif:"Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --measure:40rem; --wide:68rem;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#10151c; --panel:#171e28; --ink:#e7ebf1; --ink2:#b2bbc8; --muted:#8792a3; --rule:#2b3544; --rule2:#1f2733;
+    --accent:#86ade3; --accent-soft:#1b2a40; --neg:#f0776b; --pos:#4cc38a;
+    --c-cash:#9aa3b1; --c-bund:#3987e5; --c-credit:#199e70; --c-eq_eu:#d95926; --c-eq_us:#9085e9; --c-eq_em:#2e9e3a; --c-gold:#c98500;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#10151c; --panel:#171e28; --ink:#e7ebf1; --ink2:#b2bbc8; --muted:#8792a3; --rule:#2b3544; --rule2:#1f2733;
+  --accent:#86ade3; --accent-soft:#1b2a40; --neg:#f0776b; --pos:#4cc38a;
+  --c-cash:#9aa3b1; --c-bund:#3987e5; --c-credit:#199e70; --c-eq_eu:#d95926; --c-eq_us:#9085e9; --c-eq_em:#2e9e3a; --c-gold:#c98500;
+}
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font-family:var(--serif); font-size:17px; line-height:1.6; margin:0; padding-inline:20px; -webkit-font-smoothing:antialiased}
+.page{max-width:var(--wide); margin:0 auto; padding-block:48px 80px}
+.prose{max-width:var(--measure)}
+h1,h2,h3{font-family:var(--serif); text-wrap:balance; line-height:1.2; margin:0}
+h1{font-size:clamp(1.9rem,3.6vw,2.6rem); font-weight:600; letter-spacing:-.01em}
+h2{font-size:1.45rem; font-weight:600; margin-bottom:.6rem}
+h2 .no{font-family:var(--sans); font-weight:500; color:var(--muted); font-size:.95rem; margin-right:.6rem; letter-spacing:.02em}
+h3{font-size:1.05rem; font-weight:600}
+p{margin:0 0 .9rem}
+a{color:var(--accent)}
+.sans{font-family:var(--sans)}
+.small{font-size:.85rem}
+.muted{color:var(--muted)}
+.ink2{color:var(--ink2)}
+.num{font-family:var(--sans); font-variant-numeric:tabular-nums}
+
+/* title block, in the manner of a working paper */
+.masthead{display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; font-family:var(--sans); font-size:.78rem; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--ink); padding-bottom:.55rem; margin-bottom:2.2rem}
+.byline{font-family:var(--sans); color:var(--ink2); font-size:.95rem; margin-top:.8rem}
+.abstract{margin-top:2rem; display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:2.5rem; align-items:start}
+.abstract .label{font-family:var(--sans); font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:.4rem}
+.keyfigs{display:grid; grid-template-columns:1fr 1fr; gap:0; border-top:1px solid var(--rule)}
+.keyfig{padding:.8rem 0 .9rem; border-bottom:1px solid var(--rule)}
+.keyfig:nth-child(odd){padding-right:1rem; border-right:1px solid var(--rule)}
+.keyfig:nth-child(even){padding-left:1rem}
+.keyfig .v{font-family:var(--sans); font-size:1.65rem; font-weight:500; font-variant-numeric:tabular-nums; line-height:1.1}
+.keyfig .k{font-family:var(--sans); font-size:.8rem; color:var(--ink2); margin-top:.25rem; line-height:1.35}
+
+section{margin-top:4rem}
+.sec-head{border-top:1px solid var(--rule); padding-top:1.2rem; margin-bottom:1.2rem}
+
+/* figures */
+figure{margin:1.6rem 0 0}
+figcaption{font-family:var(--sans); font-size:.82rem; color:var(--ink2); margin-top:.5rem; line-height:1.45; max-width:var(--measure)}
+figcaption b{color:var(--ink); font-weight:600}
+.fig-title{font-family:var(--sans); font-size:.85rem; font-weight:600; margin-bottom:.35rem}
+.fig-title .muted{font-weight:400}
+.chart{width:100%; position:relative}
+.chart svg{display:block; width:100%; height:auto; overflow:visible}
+.grid2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:2.2rem}
+svg text{font-family:var(--sans); fill:var(--muted); font-size:11px}
+svg .lbl{fill:var(--ink2)}
+svg .lbl-strong{fill:var(--ink); font-weight:600}
+svg .grid{stroke:var(--rule2); stroke-width:1}
+svg .axis{stroke:var(--rule); stroke-width:1}
+svg .zero{stroke:var(--muted); stroke-width:1}
+
+/* tables */
+.tablewrap{overflow-x:auto; margin-top:1.2rem}
+table{border-collapse:collapse; width:100%; font-family:var(--sans); font-size:.86rem; font-variant-numeric:tabular-nums}
+caption{text-align:left; font-weight:600; font-size:.85rem; padding-bottom:.5rem; color:var(--ink)}
+caption .muted{font-weight:400}
+th{font-weight:500; color:var(--muted); text-align:right; padding:.45rem .6rem; border-bottom:1px solid var(--ink); white-space:nowrap; font-size:.78rem}
+td{padding:.5rem .6rem; text-align:right; border-bottom:1px solid var(--rule2); white-space:nowrap}
+th:first-child,td:first-child{text-align:left; padding-left:0}
+tbody tr:last-child td{border-bottom:1px solid var(--rule)}
+.sw{display:inline-block; width:.62rem; height:.62rem; border-radius:2px; margin-right:.5rem; vertical-align:baseline}
+td input.cma{width:4.6rem; font:inherit; text-align:right; padding:.15rem .3rem; border:1px solid var(--accent); border-radius:3px; background:var(--accent-soft); color:var(--ink)}
+.derive{text-align:left; color:var(--ink2); white-space:normal; min-width:16rem; line-height:1.4}
+.neg{color:var(--neg)} .pos{color:var(--pos)}
+
+/* controls */
+.controls{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1.4rem 2rem; background:var(--panel); padding:1.2rem 1.3rem 1.3rem; border-radius:6px; margin-top:1.4rem; font-family:var(--sans)}
+.ctl label{display:flex; justify-content:space-between; gap:.5rem; font-size:.82rem; color:var(--ink2); margin-bottom:.35rem}
+.ctl label output{color:var(--ink); font-weight:600; font-variant-numeric:tabular-nums}
+.ctl .hint{font-size:.74rem; color:var(--muted); margin-top:.35rem; line-height:1.35}
+input[type=range]{width:100%; accent-color:var(--accent)}
+.seg{display:flex; border:1px solid var(--rule); border-radius:5px; overflow:hidden; background:var(--bg)}
+.seg button{flex:1; font:inherit; font-size:.78rem; padding:.42rem .3rem; border:0; background:transparent; color:var(--ink2); cursor:pointer; line-height:1.2}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--accent); color:var(--bg); font-weight:600}
+.btn{font-family:var(--sans); font-size:.8rem; border:1px solid var(--rule); background:var(--bg); color:var(--ink); padding:.35rem .7rem; border-radius:4px; cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn[aria-pressed="true"]{border-color:var(--accent); background:var(--accent-soft)}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.numin{width:100%; font:inherit; font-size:.9rem; padding:.35rem .5rem; border:1px solid var(--rule); border-radius:4px; background:var(--bg); color:var(--ink); font-variant-numeric:tabular-nums}
+
+.stats{display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:0; margin-top:1.4rem; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule); font-family:var(--sans)}
+.stat{padding:.75rem .9rem .8rem 0}
+.stat+.stat{padding-left:.9rem; border-left:1px solid var(--rule2)}
+.stat .v{font-size:1.3rem; font-weight:500; font-variant-numeric:tabular-nums}
+.stat .v small{font-size:.78rem; color:var(--muted); font-weight:400; margin-left:.3rem; white-space:nowrap; display:inline-block}
+.stat .k{font-size:.76rem; color:var(--ink2); line-height:1.3; margin-top:.15rem}
+.pf-grid{display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:2.4rem; margin-top:1.6rem}
+
+.note{font-family:var(--sans); font-size:.8rem; color:var(--ink2); border-left:2px solid var(--rule); padding-left:.8rem; margin-top:1rem; max-width:var(--measure)}
+ol.fn{font-family:var(--sans); font-size:.8rem; color:var(--ink2); padding-left:1.2rem; max-width:var(--measure)}
+ol.fn li{margin-bottom:.35rem}
+sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
+.method h3{margin:1.6rem 0 .4rem}
+.method ul{padding-left:1.2rem; margin:.2rem 0 1rem}
+.method li{margin-bottom:.35rem}
+.foot{margin-top:4rem; border-top:1px solid var(--ink); padding-top:1rem; font-family:var(--sans); font-size:.78rem; color:var(--muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:.8rem}
+
+#tip{position:fixed; pointer-events:none; z-index:10; background:var(--ink); color:var(--bg); font-family:var(--sans); font-size:.76rem; line-height:1.35; padding:.4rem .55rem; border-radius:4px; max-width:260px; opacity:0; transition:opacity .08s}
+#tip.on{opacity:1}
+#tip b{font-weight:600}
+
+@media (max-width:860px){
+  .abstract,.grid2,.pf-grid{grid-template-columns:1fr}
+  .controls{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .stat,.stat+.stat{padding:.7rem .8rem .7rem 0; border-left:0}
+  .stat:nth-child(even){padding-left:.8rem; border-left:1px solid var(--rule2)}
+  body{font-size:16px}
+}
+@media (max-width:440px){ body{padding-inline:16px} .keyfig .v{font-size:1.35rem} }
+@media (prefers-reduced-motion:reduce){ *{transition:none!important} }
+
+/* portfolio check */
+.pc-wrap{background:var(--panel); border-radius:6px; padding:1rem 1.2rem 1.1rem; margin-top:1.2rem; font-family:var(--sans)}
+.pc-head,.pc-row{display:grid; grid-template-columns:minmax(0,2.2fr) minmax(0,1.6fr) 6.5rem 2rem; gap:.6rem; align-items:center}
+.pc-head{color:var(--muted); font-size:.76rem; padding-bottom:.3rem}
+.pc-row{padding:.3rem 0}
+.pc-row select,.pc-row input{width:100%; font:inherit; font-size:.88rem; padding:.38rem .5rem; border:1px solid var(--rule); border-radius:4px; background:var(--bg); color:var(--ink)}
+.pc-row input.w{text-align:right; font-variant-numeric:tabular-nums}
+.pc-row .det{display:flex; gap:.4rem}
+.pc-row .rm{border:0; background:transparent; color:var(--muted); font-size:1.1rem; cursor:pointer; line-height:1}
+.pc-row .rm:hover{color:var(--neg)}
+.pc-actions{display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-top:.7rem}
+#pc-sum{margin-left:auto}
+.pc-verdict{margin-top:1.6rem; font-family:var(--sans)}
+.pc-verdict h3{font-family:var(--serif); font-size:1.2rem; margin-bottom:.5rem}
+.pos-list{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-top:1.4rem}
+.pos-card{border:1px solid var(--rule); border-radius:6px; padding:.9rem 1rem 1rem; font-family:var(--sans); font-size:.86rem; background:var(--bg)}
+.pos-card .t{display:flex; justify-content:space-between; gap:.6rem; align-items:baseline; margin-bottom:.15rem}
+.pos-card .t b{font-size:.95rem}
+.pos-card .sub{color:var(--muted); font-size:.76rem; margin-bottom:.55rem}
+.pos-card ul{list-style:none; padding:0; margin:.2rem 0 0}
+.pos-card li{padding-left:1.1rem; position:relative; margin-bottom:.3rem; line-height:1.4; color:var(--ink2)}
+.pos-card li::before{position:absolute; left:0; font-weight:600}
+.pos-card li.p::before{content:"+"; color:var(--pos)}
+.pos-card li.m::before{content:"−"; color:var(--neg)}
+.pos-card li.i::before{content:"·"; color:var(--muted)}
+.pill{display:inline-block; font-family:var(--sans); font-size:.72rem; font-weight:600; padding:.12rem .5rem; border-radius:999px; white-space:nowrap; border:1px solid currentColor}
+.pill.up{color:var(--pos)} .pill.dn{color:var(--neg)} .pill.nt{color:var(--muted)}
+.bar{display:inline-block; position:relative; width:5.5rem; height:.5rem; background:var(--rule2); border-radius:2px; vertical-align:middle}
+.bar i{position:absolute; top:0; bottom:0; border-radius:2px}
+.bar::after{content:""; position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--muted)}
+.warn{border-left:2px solid var(--neg); padding-left:.8rem; margin-top:.8rem; font-family:var(--sans); font-size:.84rem; color:var(--ink2)}
+@media (max-width:860px){ .pos-list{grid-template-columns:1fr} .pc-head{display:none} .pc-row{grid-template-columns:1fr 5.5rem 2rem; row-gap:.35rem} .pc-row .det{grid-column:1 / -1; grid-row:2} }
+</style>
+</head>
+<body>
+
+
+<div class="page">
+  <div class="masthead"><span>Arbeitsmodell · Strategische und taktische Asset-Allokation</span><span id="asof">Stand</span></div>
+
+  <header>
+    <h1>Strategische Allokation für den Euro-Anleger</h1>
+    <div class="byline">Philip Kroos · Portfolio-Check, taktische Signale, Kapitalmarktannahmen und Stresstests</div>
+  </header>
+
+  <div class="abstract">
+    <div class="prose">
+      <div class="label">Kurzfassung</div>
+      <p>Das Modell beantwortet eine praktische Frage: Passt ein Depot zur aktuellen Marktlage, und wo lohnt eine Umschichtung? Es bewertet sieben Anlageklassen nach Bewertung und Trend, leitet daraus Über- und Untergewichtungen ab und prüft ein eingegebenes Depot gegen ein Modellportfolio mit gleichem Risiko.</p>
+      <p>Die Grundlage sind erwartete Renditen über zehn Jahre aus Bewertungen und Startrenditen. Sie fallen nach über einem Jahrzehnt hoher Aktienrenditen bescheiden aus. Seit 2022 bewegen sich zudem Aktien und Bundesanleihen wieder gleichgerichtet, Anleihen sichern also schlechter ab. Beides fließt in die Einschätzung ein.</p>
+      <p class="small sans ink2">Alle Eingaben, Annahmen und Szenarien sind veränderbar. Die Rechnung läuft vollständig im Browser, es werden keine Daten übertragen.</p>
+    </div>
+    <div>
+      <div class="label">Auf einen Blick</div>
+      <div class="keyfigs" id="keyfigs"></div>
+    </div>
+  </div>
+
+  <section id="check">
+    <div class="sec-head"><h2><span class="no">1</span>Portfolio-Check</h2></div>
+    <div class="prose">
+      <p>Positionen mit Gewicht eintragen, etwa einen MSCI-World-ETF, Anleihen oder eine Einzelaktie. Das Modell zerlegt Fonds in ihre Regionen, bewertet jede Position mit den Signalen aus Abschnitt 2 und vergleicht das Depot mit einem Modellportfolio gleichen Risikos.</p>
+    </div>
+    <div class="pc-wrap">
+      <div class="pc-head sans small"><span>Position</span><span>Details</span><span>Gewicht %</span><span></span></div>
+      <div id="pc-rows"></div>
+      <div class="pc-actions">
+        <button type="button" class="btn" id="pc-add">Position hinzufügen</button>
+        <span class="sans small muted">Beispiele:</span>
+        <button type="button" class="btn" data-example="welt">Welt-ETF plus Anleihen</button>
+        <button type="button" class="btn" data-example="usa">US-lastig mit Einzelaktien</button>
+        <button type="button" class="btn" data-example="defensiv">Defensiv</button>
+        <span class="sans small" id="pc-sum"></span>
+      </div>
+    </div>
+    <div id="pc-out"></div>
+  </section>
+
+  <section id="signale">
+    <div class="sec-head"><h2><span class="no">2</span>Taktische Signale</h2></div>
+    <div class="prose">
+      <p>Zwei Signale je Anlageklasse. <b>Bewertung</b> misst, wie teuer eine Anlage gegenüber ihrer eigenen Geschichte oder einem fairen Wert ist. Sie erklärt Renditen über Jahre, kaum über Monate. <b>Trend</b> misst die Überrendite der letzten zwölf Monate über Geldmarkt, skaliert mit der Schwankung. Er wirkt über Monate und versagt an Wendepunkten. Die Kombination gleicht beide Schwächen teilweise aus.</p>
+    </div>
+    <div class="tablewrap">
+      <table id="tbl-sig">
+        <caption>Tabelle 1 <span class="muted" id="sig-cap"></span></caption>
+        <thead><tr><th>Anlageklasse</th><th style="text-align:center">Bewertung</th><th style="text-align:center">Trend</th><th style="text-align:center">Gesamt</th><th>Einstufung</th><th>Referenz</th><th>Taktisch</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="grid2" style="margin-top:1.8rem">
+      <figure style="margin-top:0">
+        <div class="fig-title">Abbildung 1 <span class="muted">Trend-Beimischung gegenüber dem statischen Referenzportfolio, Wert von 1 € in EUR</span></div>
+        <div class="chart" id="fig-bt"></div>
+      </figure>
+      <div>
+        <div class="tablewrap" style="margin-top:0">
+          <table id="tbl-bt">
+            <caption>Tabelle 2 <span class="muted" id="bt-cap"></span></caption>
+            <thead><tr><th></th><th>Taktisch</th><th>Referenz</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="note" id="bt-note"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1 -->
+  <section id="annahmen">
+    <div class="sec-head"><h2><span class="no">3</span>Kapitalmarktannahmen</h2></div>
+    <div class="prose">
+      <p>Für Anleihen ist die heutige Rendite der beste Schätzer der Rendite der nächsten zehn Jahre. Für Aktien kombiniert das Modell zwei Verfahren zu gleichen Teilen. Das erste ist eine Regression der zehnjährigen Folgerendite auf die zyklisch bereinigte Ertragsrendite (1/CAPE). Das zweite ist eine Bausteinrechnung aus Dividendenrendite, realem Gewinnwachstum und einer teilweisen Normalisierung der Bewertung. Fremdwährungen sind ungesichert. Nach relativer Kaufkraftparität gleicht die Wechselkursbewegung die Inflationsdifferenz aus, sodass die Euro-Rendite gleich der realen Rendite plus Euro-Inflation ist.</p>
+    </div>
+    <figure>
+      <div class="fig-title">Abbildung 2 <span class="muted">Erwartete Rendite p. a. über 10 Jahre (Punkt, mit Bandbreite ±1 Standardabweichung) gegenüber der realisierten Rendite 1990–2026 (Ring), nominal in EUR</span></div>
+      <div class="chart" id="fig-cma"></div>
+    </figure>
+    <div class="tablewrap">
+      <table id="tbl-cma">
+        <caption>Tabelle 3 <span class="muted">Annahmen je Anlageklasse. Volatilität und Korrelationen aus Monatsrenditen 1990–2026.</span></caption>
+        <thead><tr><th>Anlageklasse</th><th>Erwartet nominal</th><th>Erwartet real</th><th>Bandbreite</th><th>Volatilität</th><th>Historisch 1990–2026</th><th>Herleitung</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div style="display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.8rem; align-items:center">
+      <button class="btn" id="btn-edit" aria-pressed="false">Eigene Annahmen eintragen</button>
+      <button class="btn" id="btn-reset" hidden>Modellwerte wiederherstellen</button>
+      <span class="small sans muted" id="edit-hint" hidden>Werte in Prozent p. a. Portfolio, Projektion und Stresstests rechnen sofort neu.</span>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="evidenz">
+    <div class="sec-head"><h2><span class="no">4</span>Evidenz hinter den Annahmen</h2></div>
+    <div class="prose">
+      <p>Beide Schätzer haben einen langen empirischen Nachweis. Die Grafiken zeigen, wie gut die Startbewertung die Rendite des folgenden Jahrzehnts erklärt hat, und wo die Märkte heute stehen.</p>
+    </div>
+    <div class="grid2">
+      <figure>
+        <div class="fig-title">Abbildung 3 <span class="muted">CAPE und reale Aktienrendite der Folgedekade, USA</span></div>
+        <div class="chart" id="fig-cape"></div>
+        <figcaption id="cap-cape"></figcaption>
+      </figure>
+      <figure>
+        <div class="fig-title">Abbildung 4 <span class="muted">Startrendite und Rendite der Folgedekade, Bundesanleihen 10 J.</span></div>
+        <div class="chart" id="fig-bond"></div>
+        <figcaption id="cap-bond"></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="regime">
+    <div class="sec-head"><h2><span class="no">5</span>Das Korrelationsregime</h2></div>
+    <div class="prose">
+      <p>Die Absicherungswirkung von Staatsanleihen ist kein Naturgesetz. Sie hängt davon ab, ob Wachstums- oder Inflationsschocks die Märkte treiben. Bei Wachstumsschocks fallen Aktien und Zinsen gemeinsam, Anleihen steigen. Bei Inflationsschocks steigen die Zinsen, und beide Anlageklassen verlieren. So war es in den 1990er Jahren und wieder seit 2022.</p>
+      <p>Das Modell teilt die Stichprobe am Vorzeichen der rollierenden 36-Monats-Korrelation und schätzt für beide Regime eigene Kovarianzmatrizen. Der Regler im nächsten Abschnitt wählt, mit welcher gerechnet wird.</p>
+    </div>
+    <figure>
+      <div class="fig-title">Abbildung 5 <span class="muted">Rollierende 36-Monats-Korrelation der Monatsrenditen, Aktien Europa gegenüber Bundesanleihen 10 J.</span></div>
+      <div class="chart" id="fig-corr"></div>
+      <figcaption id="cap-corr"></figcaption>
+    </figure>
+  </section>
+
+  <!-- 4 -->
+  <section id="portfolio">
+    <div class="sec-head"><h2><span class="no">6</span>Strategisches Portfolio</h2></div>
+    <div class="prose">
+      <p>Die Gewichte maximieren die erwartete Rendite bei gegebenem Risikobudget, mit Ober- und Untergrenzen je Anlageklasse. Reine Mittelwert-Varianz-Optimierung reagiert extrem auf kleine Änderungen der Renditeannahmen. Das Modell verankert die Annahmen deshalb im Stil von Black und Litterman an einem Referenzportfolio. Der dritte Regler bestimmt, wie stark die Bewertungssignale gegenüber diesem Anker zählen.</p>
+    </div>
+    <div class="controls">
+      <div class="ctl">
+        <label for="in-vol">Risikobudget (Volatilität p. a.) <output id="out-vol"></output></label>
+        <input type="range" id="in-vol" min="3" max="15" step="0.5" value="8">
+        <div class="hint" id="hint-vol"></div>
+      </div>
+      <div class="ctl">
+        <label>Korrelationsregime</label>
+        <div class="seg" id="seg-regime" role="group" aria-label="Korrelationsregime">
+          <button type="button" data-v="pos" aria-pressed="true">Inflation</button>
+          <button type="button" data-v="all" aria-pressed="false">Gesamt</button>
+          <button type="button" data-v="neg" aria-pressed="false">Wachstum</button>
+        </div>
+        <div class="hint" id="hint-regime"></div>
+      </div>
+      <div class="ctl">
+        <label for="in-conf">Gewicht der Bewertungssignale <output id="out-conf"></output></label>
+        <input type="range" id="in-conf" min="0" max="100" step="5" value="25">
+        <div class="hint">0 % hält das Referenzportfolio. 100 % folgt allein den Kapitalmarktannahmen.</div>
+      </div>
+    </div>
+
+    <div class="stats" id="pf-stats"></div>
+
+    <div class="pf-grid">
+      <figure style="margin-top:0">
+        <div class="fig-title">Abbildung 6 <span class="muted">Gewichte und Risikobeiträge. Striche markieren das Referenzportfolio.</span></div>
+        <div class="chart" id="fig-weights"></div>
+      </figure>
+      <figure style="margin-top:0">
+        <div class="fig-title">Abbildung 7 <span class="muted">Effizienzlinie unter den Nebenbedingungen</span></div>
+        <div class="chart" id="fig-frontier"></div>
+      </figure>
+    </div>
+    <p class="note" id="pf-note"></p>
+  </section>
+
+  <!-- 5 -->
+  <section id="projektion">
+    <div class="sec-head"><h2><span class="no">7</span>Vermögensprojektion</h2></div>
+    <div class="prose">
+      <p>Ein Familienvermögen wird selten nur angelegt. Es finanziert Entnahmen und soll real erhalten bleiben. Die Simulation zieht Jahresrenditen des gewählten Portfolios und berücksichtigt dabei auch, dass die Renditeannahmen selbst unsicher sind. Die Entnahme ist als fester, inflationsindexierter Betrag modelliert.</p>
+    </div>
+    <div class="controls">
+      <div class="ctl"><label for="in-w0">Anfangsvermögen (EUR)</label><input class="numin" id="in-w0" type="text" inputmode="numeric" value="10.000.000"></div>
+      <div class="ctl"><label for="in-wd">Entnahme p. a. in % des Anfangsvermögens <output id="out-wd"></output></label><input type="range" id="in-wd" min="0" max="6" step="0.25" value="3"></div>
+      <div class="ctl"><label for="in-h">Horizont <output id="out-h"></output></label><input type="range" id="in-h" min="5" max="30" step="1" value="20"></div>
+    </div>
+    <div class="stats" id="mc-stats"></div>
+    <figure>
+      <div class="fig-title">Abbildung 8 <span class="muted">Reales Vermögen nach Entnahmen und 0,5 % Kosten p. a., in Kaufkraft von heute. Bänder 5–95 % und 25–75 %, Linie Median.</span></div>
+      <div class="chart" id="fig-fan"></div>
+    </figure>
+  </section>
+
+  <!-- 6 -->
+  <section id="stress">
+    <div class="sec-head"><h2><span class="no">8</span>Stresstests</h2></div>
+    <div class="prose">
+      <p>Die historischen Szenarien spielen das Portfolio mit monatlicher Wiederanlage durch tatsächliche Krisen. Die hypothetischen Szenarien setzen einen Schock und leiten die Reaktion der übrigen Anlageklassen aus der Kovarianzmatrix ab, getrennt nach Regime. Der Vergleich zeigt, wie viel vom Ausgang eines Schocks am Korrelationsregime hängt.</p>
+    </div>
+    <div class="tablewrap">
+      <table id="tbl-hist">
+        <caption>Tabelle 4 <span class="muted">Historische Krisen, kumulierte Rendite im Zeitraum</span></caption>
+        <thead></thead><tbody></tbody>
+      </table>
+    </div>
+    <div class="tablewrap" style="margin-top:2rem">
+      <table id="tbl-hyp">
+        <caption>Tabelle 5 <span class="muted">Hypothetische Schocks, bedingte erwartete Portfolioreaktion</span></caption>
+        <thead></thead><tbody></tbody>
+      </table>
+    </div>
+    <p class="note" id="stress-note"></p>
+  </section>
+
+  <!-- 7 -->
+  <section id="methodik" class="method">
+    <div class="sec-head"><h2><span class="no">9</span>Methodik und Grenzen</h2></div>
+    <div class="prose" id="method-body"></div>
+  </section>
+
+  <div class="foot">
+    <span>Philip Kroos · Daten: Deutsche Bundesbank, EZB, FRED, Kenneth R. French Data Library, Robert Shiller, Weltbank, Börsenkurse. Keine Anlageberatung.</span>
+    <span id="foot-build"></span>
+  </div>
+</div>
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script id="model" type="application/json">{"meta":{"title":"Strategische Allokation für den Euro-Anleger","author":"Philip Kroos","as_of":"2026-09-22","built":"2026-09-23","sample":["1990-08","2026-07"],"inflation":{"value":0.02,"note":"Durchschnittliche HVPI-Inflation über 10 Jahre. Entspricht dem EZB-Ziel. Der Energiepreisschock im September 2026 hebt die Inflation kurzfristig, ändert den Zehnjahresdurchschnitt aber wenig.","source":"EZB, geldpolitische Strategie (2021)"},"credit_observed_from":"2009-05","credit_backfill":{"beta":{"const":-0.0007466434004322575,"cash":0.7528144418107167,"bund":0.39667209121516006,"eq_eu":0.1840555200943117},"r2":0.638649681145689,"resid_sd_monthly":0.008043702854353196,"overlap":["2009-05","2026-07"]},"gold_eom_from":"2000-12","bund_mod_duration":8.32},"assets":[{"key":"cash","name":"Geldmarkt EUR","expected":0.023,"real":0.0029,"band":[0.013,0.033],"vol":0.0077,"hist_geo":0.0272,"hist_vol":0.0077,"blocks":[{"label":"Erwarteter Geldmarktsatz","value":0.023}],"detail":{"value":0.023,"band":0.01,"current":0.0244,"current_source":"€STR 2,44 % am 21.09.2026 (EZB via FRED, ECBESTRVOLWGTTRMDMNRT)","neutral":0.0225,"note":"Pfad vom aktuellen €STR zu einem neutralen Nominalzins von 2,25 % (reale neutrale Rate um 0,25 % plus 2 % Inflation). Mittelwert über 10 Jahre."}},{"key":"bund","name":"Bundesanleihen 10 J.","expected":0.035,"real":0.0147,"band":[0.029,0.041],"vol":0.0594,"hist_geo":0.0458,"hist_vol":0.0595,"blocks":[{"label":"Startrendite","value":0.035}],"detail":{"yield":0.035,"band":0.006,"source":"Bund 10 J. 3,54 % am 15.09.2026 (Euronews), EZB-AAA-Zinsstrukturkurve 10 J. 3,47 % am 21.09.2026","note":"Für eine Laufzeit von rund 10 Jahren ist die Startrendite der beste einzelne Schätzer der Anleiherendite. Abschnitt 2 zeigt den Zusammenhang für Bundesanleihen seit 1972."}},{"key":"credit","name":"Unternehmensanleihen EUR (IG)","expected":0.0383,"real":0.0179,"band":[0.0303,0.0463],"vol":0.0471,"hist_geo":0.0457,"hist_vol":0.041,"blocks":[{"label":"Rendite auf Verfall","value":0.0413},{"label":"Ausfall- und Herabstufungsverluste","value":-0.003}],"detail":{"ytm":0.0413,"loss":0.003,"band":0.008,"duration":4.35,"source":"iShares Core € Corp Bond (IEAC), gewichtete Rendite auf Verfall 4,13 %, Duration 4,35, Stand 21.09.2026","note":"Abzug von 0,30 % p. a. für Ausfälle und Herabstufungen. Größenordnung aus langfristigen Ausfallstudien für Investment Grade (Ausfallrate unter 0,2 % p. a., Verwertungsquote um 40 %) plus Verluste durch Herabstufungen."}},{"key":"eq_eu","name":"Aktien Europa","expected":0.0549,"real":0.0343,"band":[0.0111,0.0988],"vol":0.1495,"hist_geo":0.0775,"hist_vol":0.1497,"blocks":[{"label":"Real, CAPE-Regression","value":0.0405},{"label":"Real, Bausteine","value":0.028},{"label":"Inflation EUR","value":0.0207}],"detail":{"cape":23.63,"cape_source":"STOXX Europe 600, 30.06.2026 (Siblis Research)","m1_regression_real":0.0405,"m2_building_blocks_real":0.028,"dy":0.026,"dy_source":"iShares STOXX Europe 600 (EXSA), Ausschüttungsrendite 12 Monate (justETF, Juli 2026)","g_real":0.011,"net_buyback":0.006,"buyback_source":"Europäische Rückkäufe auf Rekordniveau (Barclays-Tracker, Bloomberg 27.02.2026), brutto grob 1,2 % des Börsenwerts. Netto etwa die Hälfte angesetzt.","g_source":"Potenzialwachstum Euroraum rund 1 %.","fair_source":"Annahme unter dem US-Wert wegen Sektormix (mehr Banken, Energie, Grundstoffe).","cape_fair":17.0,"closure":0.5,"reprice":-0.015}},{"key":"eq_us","name":"Aktien USA","expected":0.0406,"real":0.0201,"band":[-0.0033,0.0844],"vol":0.1592,"hist_geo":0.1126,"hist_vol":0.1594,"blocks":[{"label":"Real, CAPE-Regression","value":0.0274},{"label":"Real, Bausteine","value":0.0129},{"label":"Inflation EUR","value":0.0204}],"detail":{"cape":35.82,"cape_source":"USA, 30.06.2026 (Siblis Research)","m1_regression_real":0.0274,"m2_building_blocks_real":0.0129,"dy":0.0105,"dy_source":"S&P 500, 21.09.2026 (GuruFocus)","g_real":0.018,"net_buyback":0.009,"buyback_source":"Brutto-Rückkaufrendite S&P 500 1,79 % (12 Monate bis Sep. 2025, S&P Dow Jones Indices). Netto nach Neuemissionen und Mitarbeiteraktien etwa die Hälfte angesetzt.","g_source":"Reales Wachstum der Gesamtgewinne nahe dem Potenzialwachstum (CBO: rund 1,8 %).","fair_source":"Median des US-CAPE seit 1950: 20,9 (Shiller-Daten).","cape_fair":20.0,"closure":0.5,"reprice":-0.0246}},{"key":"eq_em","name":"Aktien Schwellenländer","expected":0.0429,"real":0.0224,"band":[-0.0009,0.0867],"vol":0.198,"hist_geo":0.0815,"hist_vol":0.1982,"blocks":[{"label":"Real, CAPE-Regression","value":0.0317},{"label":"Real, Bausteine","value":0.0132},{"label":"Inflation EUR","value":0.0204}],"detail":{"cape":30.6393,"cape_source":"Länder-CAPE 30.06.2026 (Siblis Research), gewichtet mit MSCI-EM-Länderanteilen 31.08.2026 (MSCI Factsheet). Deckt 80 % des Index ab, Aggregation über das gewichtete Ertragsverhältnis.","m1_regression_real":0.0317,"m2_building_blocks_real":0.0132,"dy":0.0201,"dy_source":"MSCI Emerging Markets, 31.08.2026 (MSCI Factsheet)","g_real":0.035,"net_buyback":-0.015,"buyback_source":"Schwellenländer verwässern durch Neuemissionen. Bernstein und Arnott (2003) zeigen eine Lücke von rund 2 % p. a. zwischen Gesamtwirtschaft und Gewinn je Aktie. Angesetzt: −1,5 %.","g_source":"Potenzialwachstum Schwellenländer rund 3,5 %.","fair_source":"Annahme, entspricht grob dem langfristigen Mittel des EM-CAPE.","cape_fair":16.0,"closure":0.5,"reprice":-0.0269}},{"key":"gold","name":"Gold","expected":0.0149,"real":-0.005,"band":[-0.0351,0.0649],"vol":0.1409,"hist_geo":0.0709,"hist_vol":0.1411,"blocks":[{"label":"Inflation EUR","value":0.0199},{"label":"Realer Preistrend","value":-0.005}],"detail":{"real":-0.005,"band":0.05,"note":"Gold hat keinen Cashflow. Langfristig folgt der Preis grob der Inflation. Der reale Goldpreis liegt nahe seinem historischen Höchststand. Erb und Harvey (2013) zeigen, dass ein hoher realer Goldpreis mit unterdurchschnittlichen realen Folgerenditen einhergeht. Annahme daher leicht negativ real."}}],"cov":{"all":[[5.9e-05,7.7e-05,6.4e-05,-8.8e-05,-6e-05,-4.2e-05,-3e-05],[7.7e-05,0.003527,0.001414,-0.000304,0.000307,-0.000336,0.000637],[6.4e-05,0.001414,0.002222,0.004114,0.003568,0.004883,8.2e-05],[-8.8e-05,-0.000304,0.004114,0.022358,0.018099,0.021217,-7e-06],[-6e-05,0.000307,0.003568,0.018099,0.025338,0.021549,0.00151],[-4.2e-05,-0.000336,0.004883,0.021217,0.021549,0.039201,0.004824],[-3e-05,0.000637,8.2e-05,-7e-06,0.00151,0.004824,0.019855]],"pos":[[3.2e-05,6.7e-05,6.1e-05,9e-05,4.9e-05,7.4e-05,1.1e-05],[6.7e-05,0.004135,0.002413,0.003103,0.003519,0.00266,0.000582],[6.1e-05,0.002413,0.002176,0.003907,0.003397,0.003713,0.000508],[9e-05,0.003103,0.003907,0.016736,0.012784,0.014374,0.001832],[4.9e-05,0.003519,0.003397,0.012784,0.020473,0.01516,0.001956],[7.4e-05,0.00266,0.003713,0.014374,0.01516,0.035879,0.005761],[1.1e-05,0.000582,0.000508,0.001832,0.001956,0.005761,0.01684]],"neg":[[2.6e-05,3.8e-05,-1.9e-05,-0.000168,-0.000183,-0.000126,1.1e-05],[3.8e-05,0.003268,0.000645,-0.002786,-0.002119,-0.002817,0.001099],[-1.9e-05,0.000645,0.002213,0.004278,0.003702,0.005501,-2.3e-05],[-0.000168,-0.002786,0.004278,0.024863,0.020623,0.024735,-0.00113],[-0.000183,-0.002119,0.003702,0.020623,0.027281,0.023909,0.000435],[-0.000126,-0.002817,0.005501,0.024735,0.023909,0.04029,0.003608],[1.1e-05,0.001099,-2.3e-05,-0.00113,0.000435,0.003608,0.022185]],"info":{"all":{"shrinkage":0.021865822239191632,"r2":0.6549295891937634,"n_overlap":207,"n_months":432},"pos":{"shrinkage":0.0759143400997875,"r2":0.8252074111743969,"n_overlap":82,"n_months":156},"neg":{"shrinkage":0.030379447557771076,"r2":0.551160323282455,"n_overlap":125,"n_months":241}}},"cape":{"alpha":0.0021,"beta":0.9076,"se_alpha":0.015,"se_beta":0.1465,"r2":0.283,"oos_r2":0.197,"oos_start":"1950-01","resid_sd":0.0438,"n_obs":1590,"n_indep":13.2,"sample":["1881-01","2013-06"],"points":[["1881-01",18.47,0.0454],["1881-04",17.95,0.0459],["1881-07",18.12,0.0445],["1881-10",16.26,0.0679],["1882-01",15.68,0.0783],["1882-04",14.92,0.088],["1882-07",15.24,0.0811],["1882-10",15.76,0.0761],["1883-01",15.27,0.0708],["1883-04",15.48,0.0652],["1883-07",15.95,0.0429],["1883-10",15.05,0.0547],["1884-01",14.43,0.0614],["1884-04",14.35,0.0719],["1884-07",13.04,0.0737],["1884-10",13.27,0.0721],["1885-01",13.13,0.0721],["1885-04",13.55,0.0669],["1885-07",14.33,0.067],["1885-10",15.99,0.0572],["1886-01",16.69,0.0443],["1886-04",16.8,0.05],["1886-07",17.85,0.0369],["1886-10",18.56,0.0308],["1887-01",17.51,0.0389],["1887-04",17.82,0.0338],["1887-07",17.43,0.0465],["1887-10",15.88,0.0571],["1888-01",15.36,0.0608],["1888-04",15.02,0.0539],["1888-07",15.28,0.0645],["1888-10",15.72,0.0627],["1889-01",15.8,0.0783],["1889-04",16.05,0.0791],["1889-07",16.89,0.0676],["1889-10",17.05,0.0609],["1890-01",17.22,0.0531],["1890-04",17.26,0.0557],["1890-07",17.59,0.0485],["1890-10",15.48,0.0668],["1891-01",15.43,0.0855],["1891-04",15.41,0.1046],["1891-07",15.62,0.0994],["1891-10",17.72,0.0829],["1892-01",19.02,0.0767],["1892-04",19.94,0.0746],["1892-07",19.21,0.0769],["1892-10",19.04,0.0697],["1893-01",17.66,0.077],["1893-04",17.1,0.0744],["1893-07",14.35,0.0823],["1893-10",15.27,0.066],["1894-01",15.74,0.0687],["1894-04",17.43,0.0576],["1894-07",16.29,0.07],["1894-10",16.5,0.0809],["1895-01",16.52,0.088],["1895-04",16.39,0.0969],["1895-07",17.55,0.0902],["1895-10",17.94,0.0937],["1896-01",16.58,0.1054],["1896-04",17.64,0.0932],["1896-07",16.64,0.0978],["1896-10",16.44,0.101],["1897-01",17.03,0.0947],["1897-04",16.7,0.082],["1897-07",18.65,0.064],["1897-10",19.03,0.0401],["1898-01",19.25,0.0505],["1898-04",17.71,0.0655],["1898-07",19.86,0.0615],["1898-10",19.95,0.0638],["1899-01",22.93,0.0566],["1899-04",23.15,0.0542],["1899-07",21.56,0.0652],["1899-10",20.15,0.0702],["1900-01",18.67,0.0745],["1900-04",18.94,0.065],["1900-07",17.69,0.0614],["1900-10",18.1,0.071],["1901-01",20.98,0.0555],["1901-04",24.41,0.044],["1901-07",23.14,0.051],["1901-10",22.25,0.0394],["1902-01",22.34,0.0441],["1902-04",22.82,0.04],["1902-07",22.39,0.0423],["1902-10",20.6,0.0506],["1903-01",20.32,0.0452],["1903-04",18.98,0.0453],["1903-07",16.92,0.0481],["1903-10",15.25,0.057],["1904-01",15.86,0.053],["1904-04",15.57,0.0527],["1904-07",16.04,0.0403],["1904-10",17.63,0.0281],["1905-01",18.46,0.0196],["1905-04",19.48,0.0226],["1905-07",19.21,0.02],["1905-10",19.9,0.0274],["1906-01",20.13,0.0247],["1906-04",18.88,0.0249],["1906-07",18.2,0.0269],["1906-10",18.1,0.029],["1907-01",17.22,0.0245],["1907-04",14.67,0.0274],["1907-07",13.59,0.0283],["1907-10",10.83,0.0314],["1908-01",11.9,0.0113],["1908-04",12.45,0.005],["1908-07",13.35,-0.0043],["1908-10",13.69,-0.0079],["1909-01",14.76,-0.0184],["1909-04",14.65,-0.0121],["1909-07",15.23,-0.0078],["1909-10",14.99,-0.0106],["1910-01",14.55,-0.021],["1910-04",13.56,-0.0218],["1910-07",12.34,-0.0232],["1910-10",13.92,-0.0311],["1911-01",14.05,-0.0375],["1911-04",14.75,-0.0403],["1911-07",15.08,-0.0455],["1911-10",13.07,-0.0279],["1912-01",13.79,-0.0212],["1912-04",13.65,-0.0072],["1912-07",13.8,-0.005],["1912-10",13.91,0.0036],["1913-01",13.15,0.0049],["1913-04",12.43,0.0122],["1913-07",11.53,0.006],["1913-10",11.47,0.0059],["1914-01",11.64,0.0142],["1914-04",11.52,0.0133],["1914-07",10.69,0.0267],["1914-10",10.61,0.0284],["1915-01",10.36,0.0457],["1915-04",11.4,0.0335],["1915-07",11.11,0.0412],["1915-10",12.55,0.0357],["1916-01",12.54,0.0409],["1916-04",11.91,0.0358],["1916-07",11.79,0.0481],["1916-10",12.05,0.0472],["1917-01",10.99,0.0588],["1917-04",9.64,0.0784],["1917-07",9.0,0.0916],["1917-10",7.39,0.1209],["1918-01",6.64,0.1369],["1918-04",6.52,0.1501],["1918-07",6.37,0.1499],["1918-10",6.29,0.1634],["1919-01",6.1,0.1833],["1919-04",6.46,0.1792],["1919-07",7.05,0.1798],["1919-10",6.79,0.1821],["1920-01",5.99,0.169],["1920-04",5.6,0.197],["1920-07",5.08,0.1894],["1920-10",5.35,0.1659],["1921-01",5.12,0.1631],["1921-04",5.3,0.1624],["1921-07",5.2,0.1574],["1921-10",5.48,0.1166],["1922-01",6.29,0.0854],["1922-04",7.27,0.0459],["1922-07",7.6,0.0236],["1922-10",8.43,0.0535],["1923-01",8.15,0.0615],["1923-04",8.37,0.0598],["1923-07",7.35,0.1236],["1923-10",7.32,0.1052],["1924-01",8.07,0.1051],["1924-04",7.92,0.1099],["1924-07",8.38,0.087],["1924-10",8.42,0.0792],["1925-01",9.69,0.0667],["1925-04",9.48,0.065],["1925-07",9.96,0.0779],["1925-10",10.72,0.0823],["1926-01",11.34,0.0913],["1926-04",10.4,0.1109],["1926-07",11.87,0.1008],["1926-10",12.43,0.1059],["1927-01",13.19,0.1055],["1927-04",14.49,0.0923],["1927-07",15.82,0.0806],["1927-10",17.54,0.0392],["1928-01",18.81,0.0286],["1928-04",21.26,0.0042],["1928-07",21.08,0.0286],["1928-10",23.58,0.0246],["1929-01",27.08,0.0054],["1929-04",27.57,-0.0101],["1929-07",29.93,-0.0115],["1929-10",28.96,-0.0013],["1930-01",22.31,0.0192],["1930-04",25.84,0.0018],["1930-07",21.55,-0.0016],["1930-10",18.21,0.0216],["1931-01",16.71,0.0272],["1931-04",16.87,0.015],["1931-07",15.52,0.0264],["1931-10",11.15,0.0512],["1932-01",9.31,0.0559],["1932-04",7.19,0.0656],["1932-07",5.84,0.0948],["1932-10",8.48,0.0606],["1933-01",8.73,0.0647],["1933-04",8.72,0.0749],["1933-07",13.75,0.0356],["1933-10",11.7,0.0494],["1934-01",13.03,0.0391],["1934-04",13.52,0.0363],["1934-07",11.74,0.0603],["1934-10",11.11,0.0663],["1935-01",11.5,0.0676],["1935-04",11.1,0.0777],["1935-07",13.2,0.0613],["1935-10",14.83,0.0611],["1936-01",17.09,0.0555],["1936-04",18.72,0.0491],["1936-07",19.36,0.0349],["1936-10",20.91,0.0018],["1937-01",21.62,-0.0016],["1937-04",20.56,-0.0027],["1937-07",19.65,0.0077],["1937-10",14.36,0.0332],["1938-01",13.51,0.0311],["1938-04",11.79,0.0481],["1938-07",14.77,0.0289],["1938-10",16.06,0.0201],["1939-01",15.6,0.0214],["1939-04",13.92,0.0324],["1939-07",15.27,0.025],["1939-10",16.82,0.0246],["1940-01",16.38,0.0364],["1940-04",16.37,0.0431],["1940-07",13.37,0.0598],["1940-10",14.33,0.0644],["1941-01",13.9,0.0708],["1941-04",12.43,0.0839],["1941-07",12.74,0.0798],["1941-10",11.58,0.0943],["1942-01",10.1,0.1098],["1942-04",8.54,0.1249],["1942-07",9.15,0.1203],["1942-10",9.6,0.1099],["1943-01",10.15,0.1111],["1943-04",11.04,0.0941],["1943-07",11.77,0.0834],["1943-10",11.19,0.0856],["1944-01",11.05,0.093],["1944-04",10.94,0.1027],["1944-07",11.74,0.1033],["1944-10",11.58,0.1116],["1945-01",11.96,0.1189],["1945-04",12.63,0.119],["1945-07",12.87,0.1303],["1945-10",14.37,0.1159],["1946-01",15.62,0.1123],["1946-04",16.04,0.1187],["1946-07",14.51,0.1303],["1946-10",11.39,0.1523],["1947-01",11.47,0.1499],["1947-04",10.9,0.1542],["1947-07",11.7,0.1534],["1947-10",11.13,0.1409],["1948-01",10.42,0.1471],["1948-04",10.78,0.145],["1948-07",11.13,0.1492],["1948-10",10.83,0.1625],["1949-01",10.25,0.1757],["1949-04",9.78,0.181],["1949-07",9.61,0.1844],["1949-10",10.17,0.1683],["1950-01",10.75,0.1617],["1950-04",11.18,0.1494],["1950-07",10.54,0.1538],["1950-10",11.66,0.1347],["1951-01",11.9,0.1418],["1951-04",11.95,0.1499],["1951-07",11.78,0.1476],["1951-10",12.31,0.1451],["1952-01",12.53,0.1433],["1952-04",12.24,0.1416],["1952-07",12.67,0.1156],["1952-10",12.13,0.1168],["1953-01",13.01,0.1237],["1953-04",12.16,0.1354],["1953-07",11.75,0.1373],["1953-10",11.39,0.1448],["1954-01",12.0,0.1415],["1954-04",12.91,0.1362],["1954-07",13.83,0.13],["1954-10",14.62,0.1239],["1955-01",15.99,0.113],["1955-04",16.69,0.1078],["1955-07",18.45,0.0899],["1955-10",17.77,0.0993],["1956-01",18.29,0.0954],["1956-04",19.37,0.0827],["1956-07",18.86,0.0753],["1956-10",17.42,0.0686],["1957-01",16.72,0.0805],["1957-04",16.12,0.0898],["1957-07",16.87,0.0846],["1957-10",14.15,0.1042],["1958-01",13.79,0.1033],["1958-04",13.91,0.1007],["1958-07",14.96,0.0954],["1958-10",16.56,0.0862],["1959-01",17.98,0.0742],["1959-04",18.43,0.0686],["1959-07",19.09,0.0559],["1959-10",18.02,0.0611],["1960-01",18.34,0.0516],["1960-04",17.43,0.0495],["1960-07",17.38,0.0353],["1960-10",16.61,0.0503],["1961-01",18.47,0.0489],["1961-04",20.38,0.0481],["1961-07",20.15,0.0438],["1961-10",20.92,0.0375],["1962-01",21.2,0.0417],["1962-04",20.66,0.0483],["1962-07",17.14,0.0647],["1962-10",16.74,0.0677],["1963-01",19.26,0.0594],["1963-04",20.15,0.0439],["1963-07",19.97,0.0381],["1963-10",20.89,0.0335],["1964-01",21.63,0.0134],["1964-04",22.42,0.0022],["1964-07",22.98,-0.0189],["1964-10",23.21,-0.0365],["1965-01",23.27,-0.0348],["1965-04",23.42,-0.0223],["1965-07",22.3,-0.0117],["1965-10",23.78,-0.0238],["1966-01",24.06,-0.0177],["1966-04",23.11,-0.0101],["1966-07",21.38,-0.0025],["1966-10",18.83,0.0059],["1967-01",20.43,-0.0023],["1967-04",21.69,-0.016],["1967-07",21.8,-0.0175],["1967-10",22.07,-0.0264],["1968-01",21.51,-0.0293],["1968-04",21.28,-0.0281],["1968-07",21.75,-0.0289],["1968-10",22.0,-0.0294],["1969-01",21.19,-0.0289],["1969-04",20.43,-0.0267],["1969-07",18.68,-0.0211],["1969-10",18.45,-0.0213],["1970-01",17.09,-0.0115],["1970-04",15.87,-0.0156],["1970-07",13.73,0.0116],["1970-10",15.06,0.0078],["1971-01",16.46,-0.0017],["1971-04",17.92,-0.0115],["1971-07",16.89,-0.0124],["1971-10",16.43,-0.0189],["1972-01",17.26,-0.0267],["1972-04",17.92,-0.0315],["1972-07",17.4,-0.0369],["1972-10",17.53,-0.0194],["1973-01",18.71,-0.0171],["1973-04",16.94,0.0007],["1973-07",15.89,0.0112],["1973-10",15.91,0.01],["1974-01",13.53,0.0242],["1974-04",12.55,0.0247],["1974-07",10.39,0.0383],["1974-10",8.74,0.0636],["1975-01",8.92,0.0649],["1975-04",10.23,0.0541],["1975-07",10.9,0.0533],["1975-10",10.33,0.0548],["1976-01",11.19,0.0576],["1976-04",11.69,0.0683],["1976-07",11.76,0.0678],["1976-10",11.35,0.0695],["1977-01",11.44,0.0792],["1977-04",10.64,0.095],["1977-07",10.57,0.1017],["1977-10",9.77,0.097],["1978-01",9.24,0.0897],["1978-04",9.26,0.0925],["1978-07",9.43,0.0913],["1978-10",9.53,0.0913],["1979-01",9.26,0.096],["1979-04",9.13,0.1011],["1979-07",8.83,0.1129],["1979-10",8.68,0.1175],["1980-01",8.85,0.1101],["1980-04",7.84,0.1204],["1980-07",8.88,0.111],["1980-10",9.36,0.0843],["1981-01",9.26,0.09],["1981-04",9.09,0.1075],["1981-07",8.45,0.1139],["1981-10",7.65,0.1248],["1982-01",7.39,0.1353],["1982-04",7.26,0.1326],["1982-07",6.64,0.1431],["1982-10",8.0,0.1195],["1983-01",8.76,0.1145],["1983-04",9.53,0.106],["1983-07",10.01,0.1014],["1983-10",10.0,0.1048],["1984-01",9.89,0.108],["1984-04",9.31,0.1077],["1984-07",8.87,0.1132],["1984-10",9.6,0.1066],["1985-01",10.0,0.1016],["1985-04",10.4,0.1055],["1985-07",11.0,0.1088],["1985-10",10.55,0.117],["1986-01",11.72,0.1104],["1986-04",13.55,0.0986],["1986-07",13.62,0.0972],["1986-10",13.43,0.1074],["1987-01",14.92,0.1052],["1987-04",16.2,0.0955],["1987-07",17.31,0.1095],["1987-10",15.53,0.1243],["1988-01",13.9,0.1382],["1988-04",14.43,0.1495],["1988-07",14.61,0.1514],["1988-10",14.81,0.1355],["1989-01",15.09,0.154],["1989-04",15.69,0.155],["1989-07",17.01,0.1485],["1989-10",17.64,0.1359],["1990-01",17.05,0.1496],["1990-04",16.81,0.1521],["1990-07",17.75,0.1455],["1990-10",14.82,0.1583],["1991-01",15.61,0.1465],["1991-04",18.16,0.1148],["1991-07",18.1,0.1159],["1991-10",18.35,0.1019],["1992-01",19.77,0.1007],["1992-04",19.3,0.0992],["1992-07",19.62,0.0749],["1992-10",19.37,0.0695],["1993-01",20.32,0.0689],["1993-04",20.46,0.0659],["1993-07",20.56,0.0765],["1993-10",21.11,0.0775],["1994-01",21.41,0.0847],["1994-04",20.06,0.0898],["1994-07",20.07,0.0857],["1994-10",20.4,0.0836],["1995-01",20.22,0.0897],["1995-04",21.64,0.0773],["1995-07",23.38,0.0723],["1995-10",23.93,0.0634],["1996-01",24.76,0.0662],["1996-04",25.42,0.0621],["1996-07",24.86,0.0584],["1996-10",26.48,0.0594],["1997-01",28.33,0.0548],["1997-04",27.59,0.0565],["1997-07",32.77,0.0398],["1997-10",32.9,0.0387],["1998-01",32.86,0.025],["1998-04",37.28,0.0087],["1998-07",38.26,-0.0056],["1998-10",33.77,-0.0179],["1999-01",40.58,-0.0441],["1999-04",42.7,-0.0518],["1999-07",43.83,-0.0459],["1999-10",40.55,-0.0266],["2000-01",43.77,-0.0303],["2000-04",43.53,-0.0255],["2000-07",42.76,-0.0353],["2000-10",39.37,-0.0211],["2001-01",36.98,-0.0082],["2001-04",32.17,0.0061],["2001-07",32.16,0.0045],["2001-10",28.58,0.0064],["2002-01",30.28,0.0079],["2002-04",29.01,0.0171],["2002-07",23.46,0.0371],["2002-10",21.96,0.0485],["2003-01",22.9,0.0474],["2003-04",22.43,0.0546],["2003-07",24.87,0.0491],["2003-10",25.68,0.0483],["2004-01",27.66,0.0453],["2004-04",26.9,0.0479],["2004-07",25.7,0.0568],["2004-10",25.41,0.055],["2005-01",26.59,0.0556],["2005-04",25.41,0.0615],["2005-07",26.29,0.0559],["2005-10",24.88,0.0575],["2006-01",26.47,0.0445],["2006-04",26.15,0.0516],["2006-07",24.7,0.0592],["2006-10",26.54,0.0493],["2007-01",27.21,0.0509],["2007-04",26.98,0.0534],["2007-07",27.41,0.0543],["2007-10",27.32,0.0569],["2008-01",24.02,0.0785],["2008-04",23.36,0.0744],["2008-07",20.91,0.0912],["2008-10",16.39,0.1173],["2009-01",15.17,0.1199],["2009-04",14.98,0.1333],["2009-07",16.69,0.1262],["2009-10",19.36,0.1107],["2010-01",20.53,0.1157],["2010-04",21.8,0.0912],["2010-07",19.67,0.1179],["2010-10",21.24,0.1156],["2011-01",22.98,0.1173],["2011-04",23.14,0.1229],["2011-07",22.61,0.1272],["2011-10",20.16,0.1388],["2012-01",21.21,0.1313],["2012-04",21.78,0.1179],["2012-07",21.0,0.1039],["2012-10",21.58,0.0927],["2013-01",21.9,0.0951],["2013-04",22.6,0.0924]],"current":{"eq_us":35.82,"eq_eu":23.63,"eq_em":30.64}},"bonds":{"points":[["1972-10",0.0836,0.086],["1973-01",0.0884,0.09],["1973-04",0.0882,0.0908],["1973-07",0.0987,0.0944],["1973-10",0.094,0.0897],["1974-01",0.0965,0.0917],["1974-04",0.1046,0.0971],["1974-07",0.113,0.1015],["1974-10",0.1097,0.1042],["1975-01",0.0949,0.0949],["1975-04",0.0906,0.0913],["1975-07",0.0871,0.0912],["1975-10",0.0909,0.0941],["1976-01",0.0854,0.0922],["1976-04",0.0853,0.099],["1976-07",0.0892,0.0986],["1976-10",0.0814,0.0888],["1977-01",0.0742,0.0861],["1977-04",0.0675,0.0824],["1977-07",0.0663,0.0761],["1977-10",0.065,0.0743],["1978-01",0.0627,0.0717],["1978-04",0.0605,0.0702],["1978-07",0.0654,0.0724],["1978-10",0.0661,0.0777],["1979-01",0.0714,0.0793],["1979-04",0.0768,0.0825],["1979-07",0.0775,0.0846],["1979-10",0.0803,0.0828],["1980-01",0.081,0.0778],["1980-04",0.0891,0.0758],["1980-07",0.0774,0.0703],["1980-10",0.0846,0.0725],["1981-01",0.0904,0.0796],["1981-04",0.0972,0.0866],["1981-07",0.0996,0.0852],["1981-10",0.0985,0.0867],["1982-01",0.0967,0.0889],["1982-04",0.0862,0.0803],["1982-07",0.0899,0.0818],["1982-10",0.0814,0.0809],["1983-01",0.0804,0.082],["1983-04",0.0788,0.0817],["1983-07",0.0833,0.0863],["1983-10",0.0851,0.0915],["1984-01",0.0842,0.0911],["1984-04",0.0836,0.0819],["1984-07",0.0842,0.0798],["1984-10",0.0765,0.0704],["1985-01",0.0749,0.0705],["1985-04",0.0751,0.0728],["1985-07",0.0715,0.0713],["1985-10",0.0704,0.0728],["1986-01",0.0673,0.0752],["1986-04",0.0579,0.0647],["1986-07",0.061,0.067],["1986-10",0.0656,0.0731],["1987-01",0.0618,0.072],["1987-04",0.0598,0.0707],["1987-07",0.0665,0.0787],["1987-10",0.0676,0.079],["1988-01",0.0688,0.0842],["1988-04",0.0687,0.0835],["1988-07",0.0712,0.0884],["1988-10",0.065,0.0869],["1989-01",0.0681,0.0932],["1989-04",0.069,0.0914],["1989-07",0.0666,0.0811],["1989-10",0.0715,0.081],["1990-01",0.0788,0.0831],["1990-04",0.0896,0.092],["1990-07",0.0859,0.0898],["1990-10",0.0904,0.0922],["1991-01",0.0861,0.0917],["1991-04",0.0824,0.0859],["1991-07",0.0861,0.0884],["1991-10",0.0823,0.0887],["1992-01",0.077,0.0802],["1992-04",0.0785,0.0794],["1992-07",0.0796,0.0816],["1992-10",0.0724,0.0779],["1993-01",0.0696,0.0793],["1993-04",0.0682,0.0763],["1993-07",0.0659,0.0748],["1993-10",0.0602,0.0676],["1994-01",0.0591,0.0667],["1994-04",0.0698,0.075],["1994-07",0.0727,0.0766],["1994-10",0.0779,0.0828],["1995-01",0.0762,0.0839],["1995-04",0.0732,0.0818],["1995-07",0.0717,0.082],["1995-10",0.0686,0.0766],["1996-01",0.0624,0.0705],["1996-04",0.0667,0.0685],["1996-07",0.0671,0.0688],["1996-10",0.0639,0.067],["1997-01",0.0615,0.062],["1997-04",0.0612,0.0602],["1997-07",0.0576,0.0558],["1997-10",0.0579,0.0568],["1998-01",0.0523,0.0536],["1998-04",0.0525,0.0516],["1998-07",0.0483,0.0462],["1998-10",0.0437,0.0464],["1999-01",0.0385,0.0455],["1999-04",0.0405,0.0474],["1999-07",0.0496,0.0543],["1999-10",0.0537,0.0578],["2000-01",0.0572,0.0612],["2000-04",0.0548,0.0604],["2000-07",0.0533,0.0617],["2000-10",0.0531,0.0625],["2001-01",0.0489,0.0529],["2001-04",0.0516,0.054],["2001-07",0.0508,0.0586],["2001-10",0.0462,0.0585],["2002-01",0.0508,0.0647],["2002-04",0.0523,0.0669],["2002-07",0.0498,0.0673],["2002-10",0.047,0.0627],["2003-01",0.0421,0.0573],["2003-04",0.0436,0.0617],["2003-07",0.0425,0.0553],["2003-10",0.0452,0.057],["2004-01",0.0448,0.0561],["2004-04",0.044,0.0559],["2004-07",0.0439,0.059],["2004-10",0.0401,0.0581],["2005-01",0.0364,0.0596],["2005-04",0.0351,0.0575],["2005-07",0.0326,0.0513],["2005-10",0.0349,0.0543],["2006-01",0.0356,0.0559],["2006-04",0.0408,0.0604],["2006-07",0.04,0.0629],["2006-10",0.0384,0.0575],["2007-01",0.0415,0.0557],["2007-04",0.0428,0.0571],["2007-07",0.0442,0.0551],["2007-10",0.0429,0.0544],["2008-01",0.041,0.049],["2008-04",0.0433,0.0509],["2008-07",0.0456,0.0535],["2008-10",0.0408,0.0488],["2009-01",0.0365,0.047],["2009-04",0.0361,0.0469],["2009-07",0.0366,0.0512],["2009-10",0.0359,0.0494],["2010-01",0.0346,0.0473],["2010-04",0.0327,0.0455],["2010-07",0.0292,0.0423],["2010-10",0.0273,0.0405],["2011-01",0.0336,0.0442],["2011-04",0.0345,0.0405],["2011-07",0.028,0.0368],["2011-10",0.0232,0.0283],["2012-01",0.0199,0.0241],["2012-04",0.018,0.0129],["2012-07",0.0145,0.0087],["2012-10",0.016,-0.0018],["2013-01",0.0165,-0.002],["2013-04",0.0126,-0.006],["2013-07",0.0176,-0.0027],["2013-10",0.0175,-0.005],["2014-01",0.0173,-0.0002],["2014-04",0.0161,-0.0039],["2014-07",0.0121,-0.0055],["2014-10",0.0089,-0.0091],["2015-01",0.0035,-0.0143],["2015-04",0.0036,-0.0137],["2015-07",0.0068,-0.0121],["2015-10",0.0051,-0.0129],["2016-01",0.0034,-0.0157],["2016-04",0.0025,-0.0181],["2016-07",-0.0015,-0.0215]],"slope":1.0351,"intercept":0.002,"r2":0.861,"mae":0.0097,"sample":["1972-10","2016-08"]},"gold":{"real_index":[["1975-01",0.193],["1975-04",0.184],["1975-07",0.183],["1975-10",0.165],["1976-01",0.15],["1976-04",0.141],["1976-07",0.132],["1976-10",0.121],["1977-01",0.134],["1977-04",0.148],["1977-07",0.136],["1977-10",0.151],["1978-01",0.151],["1978-04",0.145],["1978-07",0.157],["1978-10",0.169],["1979-01",0.168],["1979-04",0.179],["1979-07",0.209],["1979-10",0.271],["1980-01",0.443],["1980-04",0.362],["1980-07",0.415],["1980-10",0.448],["1981-01",0.403],["1981-04",0.378],["1981-07",0.346],["1981-10",0.338],["1982-01",0.297],["1982-04",0.281],["1982-07",0.275],["1982-10",0.349],["1983-01",0.372],["1983-04",0.341],["1983-07",0.334],["1983-10",0.326],["1984-01",0.329],["1984-04",0.316],["1984-07",0.31],["1984-10",0.326],["1985-01",0.297],["1985-04",0.31],["1985-07",0.282],["1985-10",0.264],["1986-01",0.258],["1986-04",0.237],["1986-07",0.23],["1986-10",0.263],["1987-01",0.233],["1987-04",0.243],["1987-07",0.255],["1987-10",0.256],["1988-01",0.24],["1988-04",0.229],["1988-07",0.244],["1988-10",0.223],["1989-01",0.221],["1989-04",0.211],["1989-07",0.208],["1989-10",0.201],["1990-01",0.201],["1990-04",0.182],["1990-07",0.171],["1990-10",0.164],["1991-01",0.163],["1991-04",0.17],["1991-07",0.18],["1991-10",0.164],["1992-01",0.149],["1992-04",0.147],["1992-07",0.137],["1992-10",0.133],["1993-01",0.135],["1993-04",0.137],["1993-07",0.168],["1993-10",0.149],["1994-01",0.167],["1994-04",0.157],["1994-07",0.147],["1994-10",0.144],["1995-01",0.14],["1995-04",0.13],["1995-07",0.128],["1995-10",0.13],["1996-01",0.139],["1996-04",0.14],["1996-07",0.136],["1996-10",0.138],["1997-01",0.133],["1997-04",0.138],["1997-07",0.134],["1997-10",0.132],["1998-01",0.121],["1998-04",0.129],["1998-07",0.121],["1998-10",0.112],["1999-01",0.114],["1999-04",0.12],["1999-07",0.107],["1999-10",0.133],["2000-01",0.129],["2000-04",0.137],["2000-07",0.134],["2000-10",0.141],["2001-01",0.125],["2001-04",0.127],["2001-07",0.132],["2001-10",0.135],["2002-01",0.14],["2002-04",0.144],["2002-07",0.136],["2002-10",0.137],["2003-01",0.14],["2003-04",0.125],["2003-07",0.131],["2003-10",0.138],["2004-01",0.14],["2004-04",0.14],["2004-07",0.137],["2004-10",0.137],["2005-01",0.135],["2005-04",0.136],["2005-07",0.143],["2005-10",0.159],["2006-01",0.184],["2006-04",0.196],["2006-07",0.199],["2006-10",0.186],["2007-01",0.194],["2007-04",0.197],["2007-07",0.19],["2007-10",0.205],["2008-01",0.232],["2008-04",0.226],["2008-07",0.229],["2008-10",0.242],["2009-01",0.258],["2009-04",0.257],["2009-07",0.252],["2009-10",0.269],["2010-01",0.306],["2010-04",0.326],["2010-07",0.346],["2010-10",0.365],["2011-01",0.373],["2011-04",0.37],["2011-07",0.408],["2011-10",0.439],["2012-01",0.462],["2012-04",0.454],["2012-07",0.471],["2012-10",0.486],["2013-01",0.446],["2013-04",0.409],["2013-07",0.345],["2013-10",0.345],["2014-01",0.329],["2014-04",0.333],["2014-07",0.346],["2014-10",0.346],["2015-01",0.396],["2015-04",0.376],["2015-07",0.361],["2015-10",0.37],["2016-01",0.358],["2016-04",0.384],["2016-07",0.42],["2016-10",0.403],["2017-01",0.389],["2017-04",0.402],["2017-07",0.363],["2017-10",0.378],["2018-01",0.369],["2018-04",0.378],["2018-07",0.356],["2018-10",0.361],["2019-01",0.384],["2019-04",0.384],["2019-07",0.421],["2019-10",0.445],["2020-01",0.473],["2020-04",0.516],["2020-07",0.523],["2020-10",0.544],["2021-01",0.51],["2021-04",0.476],["2021-07",0.492],["2021-10",0.489],["2022-01",0.518],["2022-04",0.565],["2022-07",0.515],["2022-10",0.495],["2023-01",0.513],["2023-04",0.523],["2023-07",0.506],["2023-10",0.512],["2024-01",0.534],["2024-04",0.61],["2024-07",0.618],["2024-10",0.688],["2025-01",0.725],["2025-04",0.77],["2025-07",0.79],["2025-10",0.945],["2026-01",1.078],["2026-04",1.068],["2026-07",0.934]],"percentile":0.992,"last":"2026-08","ratio_to_median":4.2},"stock_bond_corr":[["1993-07",0.342],["1993-08",0.227],["1993-09",0.153],["1993-10",0.155],["1993-11",0.17],["1993-12",0.175],["1994-01",0.103],["1994-02",0.164],["1994-03",0.215],["1994-04",0.137],["1994-05",0.198],["1994-06",0.175],["1994-07",0.218],["1994-08",0.212],["1994-09",0.243],["1994-10",0.248],["1994-11",0.256],["1994-12",0.231],["1995-01",0.201],["1995-02",0.197],["1995-03",0.19],["1995-04",0.212],["1995-05",0.246],["1995-06",0.217],["1995-07",0.231],["1995-08",0.244],["1995-09",0.299],["1995-10",0.32],["1995-11",0.306],["1995-12",0.32],["1996-01",0.321],["1996-02",0.258],["1996-03",0.274],["1996-04",0.277],["1996-05",0.262],["1996-06",0.272],["1996-07",0.228],["1996-08",0.164],["1996-09",0.194],["1996-10",0.179],["1996-11",0.199],["1996-12",0.153],["1997-01",0.188],["1997-02",0.155],["1997-03",0.059],["1997-04",0.108],["1997-05",-0.019],["1997-06",0.021],["1997-07",0.06],["1997-08",0.105],["1997-09",0.057],["1997-10",0.098],["1997-11",0.123],["1997-12",0.152],["1998-01",0.219],["1998-02",0.229],["1998-03",0.21],["1998-04",0.222],["1998-05",0.192],["1998-06",0.17],["1998-07",0.163],["1998-08",-0.051],["1998-09",-0.104],["1998-10",-0.089],["1998-11",-0.062],["1998-12",-0.071],["1999-01",-0.067],["1999-02",-0.051],["1999-03",-0.055],["1999-04",-0.045],["1999-05",0.018],["1999-06",-0.008],["1999-07",0.044],["1999-08",0.038],["1999-09",0.049],["1999-10",0.044],["1999-11",0.038],["1999-12",0.011],["2000-01",0.056],["2000-02",0.04],["2000-03",0.061],["2000-04",0.074],["2000-05",0.071],["2000-06",0.046],["2000-07",0.016],["2000-08",-0.005],["2000-09",-0.036],["2000-10",-0.055],["2000-11",-0.087],["2000-12",-0.125],["2001-01",-0.162],["2001-02",-0.199],["2001-03",-0.208],["2001-04",-0.256],["2001-05",-0.251],["2001-06",-0.264],["2001-07",-0.288],["2001-08",-0.185],["2001-09",-0.096],["2001-10",-0.027],["2001-11",-0.092],["2001-12",-0.12],["2002-01",-0.152],["2002-02",-0.147],["2002-03",-0.173],["2002-04",-0.227],["2002-05",-0.252],["2002-06",-0.269],["2002-07",-0.3],["2002-08",-0.273],["2002-09",-0.33],["2002-10",-0.373],["2002-11",-0.388],["2002-12",-0.401],["2003-01",-0.456],["2003-02",-0.493],["2003-03",-0.544],["2003-04",-0.556],["2003-05",-0.473],["2003-06",-0.493],["2003-07",-0.504],["2003-08",-0.511],["2003-09",-0.511],["2003-10",-0.539],["2003-11",-0.531],["2003-12",-0.523],["2004-01",-0.524],["2004-02",-0.498],["2004-03",-0.504],["2004-04",-0.468],["2004-05",-0.471],["2004-06",-0.466],["2004-07",-0.463],["2004-08",-0.451],["2004-09",-0.494],["2004-10",-0.564],["2004-11",-0.54],["2004-12",-0.535],["2005-01",-0.519],["2005-02",-0.525],["2005-03",-0.51],["2005-04",-0.51],["2005-05",-0.501],["2005-06",-0.472],["2005-07",-0.491],["2005-08",-0.494],["2005-09",-0.479],["2005-10",-0.344],["2005-11",-0.345],["2005-12",-0.234],["2006-01",-0.202],["2006-02",-0.202],["2006-03",-0.234],["2006-04",-0.196],["2006-05",-0.206],["2006-06",-0.168],["2006-07",-0.163],["2006-08",-0.141],["2006-09",-0.112],["2006-10",-0.038],["2006-11",-0.047],["2006-12",-0.092],["2007-01",-0.102],["2007-02",-0.164],["2007-03",-0.162],["2007-04",-0.2],["2007-05",-0.233],["2007-06",-0.203],["2007-07",-0.238],["2007-08",-0.23],["2007-09",-0.23],["2007-10",-0.215],["2007-11",-0.246],["2007-12",-0.196],["2008-01",-0.395],["2008-02",-0.387],["2008-03",-0.376],["2008-04",-0.382],["2008-05",-0.431],["2008-06",-0.35],["2008-07",-0.373],["2008-08",-0.346],["2008-09",-0.327],["2008-10",-0.403],["2008-11",-0.455],["2008-12",-0.485],["2009-01",-0.415],["2009-02",-0.43],["2009-03",-0.408],["2009-04",-0.426],["2009-05",-0.459],["2009-06",-0.456],["2009-07",-0.427],["2009-08",-0.411],["2009-09",-0.424],["2009-10",-0.407],["2009-11",-0.395],["2009-12",-0.401],["2010-01",-0.396],["2010-02",-0.392],["2010-03",-0.377],["2010-04",-0.364],["2010-05",-0.369],["2010-06",-0.371],["2010-07",-0.381],["2010-08",-0.349],["2010-09",-0.358],["2010-10",-0.381],["2010-11",-0.369],["2010-12",-0.406],["2011-01",-0.366],["2011-02",-0.365],["2011-03",-0.351],["2011-04",-0.326],["2011-05",-0.321],["2011-06",-0.379],["2011-07",-0.38],["2011-08",-0.447],["2011-09",-0.497],["2011-10",-0.528],["2011-11",-0.472],["2011-12",-0.43],["2012-01",-0.495],["2012-02",-0.5],["2012-03",-0.498],["2012-04",-0.492],["2012-05",-0.505],["2012-06",-0.524],["2012-07",-0.545],["2012-08",-0.567],["2012-09",-0.565],["2012-10",-0.588],["2012-11",-0.589],["2012-12",-0.572],["2013-01",-0.576],["2013-02",-0.575],["2013-03",-0.584],["2013-04",-0.583],["2013-05",-0.552],["2013-06",-0.468],["2013-07",-0.455],["2013-08",-0.441],["2013-09",-0.41],["2013-10",-0.39],["2013-11",-0.418],["2013-12",-0.376],["2014-01",-0.385],["2014-02",-0.376],["2014-03",-0.414],["2014-04",-0.421],["2014-05",-0.409],["2014-06",-0.416],["2014-07",-0.4],["2014-08",-0.271],["2014-09",-0.224],["2014-10",-0.177],["2014-11",-0.197],["2014-12",-0.23],["2015-01",-0.141],["2015-02",-0.142],["2015-03",-0.143],["2015-04",-0.112],["2015-05",0.063],["2015-06",0.28],["2015-07",0.286],["2015-08",0.277],["2015-09",0.246],["2015-10",0.255],["2015-11",0.25],["2015-12",0.298],["2016-01",0.196],["2016-02",0.174],["2016-03",0.164],["2016-04",0.15],["2016-05",0.167],["2016-06",0.03],["2016-07",0.032],["2016-08",0.022],["2016-09",0.009],["2016-10",0.037],["2016-11",0.042],["2016-12",0.033],["2017-01",0.056],["2017-02",0.068],["2017-03",0.042],["2017-04",0.038],["2017-05",0.024],["2017-06",0.051],["2017-07",0.062],["2017-08",0.044],["2017-09",0.031],["2017-10",0.045],["2017-11",0.038],["2017-12",0.052],["2018-01",-0.032],["2018-02",-0.043],["2018-03",-0.068],["2018-04",-0.078],["2018-05",-0.06],["2018-06",-0.149],["2018-07",-0.197],["2018-08",-0.244],["2018-09",-0.226],["2018-10",-0.312],["2018-11",-0.323],["2018-12",-0.417],["2019-01",-0.246],["2019-02",-0.223],["2019-03",-0.186],["2019-04",-0.196],["2019-05",-0.263],["2019-06",-0.151],["2019-07",-0.161],["2019-08",-0.186],["2019-09",-0.214],["2019-10",-0.28],["2019-11",-0.294],["2019-12",-0.3],["2020-01",-0.324],["2020-02",-0.422],["2020-03",-0.167],["2020-04",-0.155],["2020-05",-0.169],["2020-06",-0.181],["2020-07",-0.183],["2020-08",-0.211],["2020-09",-0.203],["2020-10",-0.211],["2020-11",-0.233],["2020-12",-0.239],["2021-01",-0.235],["2021-02",-0.253],["2021-03",-0.246],["2021-04",-0.239],["2021-05",-0.247],["2021-06",-0.244],["2021-07",-0.221],["2021-08",-0.218],["2021-09",-0.173],["2021-10",-0.167],["2021-11",-0.184],["2021-12",-0.196],["2022-01",-0.178],["2022-02",-0.127],["2022-03",-0.127],["2022-04",-0.105],["2022-05",-0.05],["2022-06",0.014],["2022-07",0.124],["2022-08",0.206],["2022-09",0.282],["2022-10",0.284],["2022-11",0.321],["2022-12",0.346],["2023-01",0.39],["2023-02",0.461],["2023-03",0.479],["2023-04",0.479],["2023-05",0.459],["2023-06",0.451],["2023-07",0.466],["2023-08",0.463],["2023-09",0.491],["2023-10",0.492],["2023-11",0.58],["2023-12",0.593],["2024-01",0.593],["2024-02",0.604],["2024-03",0.622],["2024-04",0.626],["2024-05",0.617],["2024-06",0.591],["2024-07",0.588],["2024-08",0.588],["2024-09",0.576],["2024-10",0.591],["2024-11",0.616],["2024-12",0.649],["2025-01",0.629],["2025-02",0.626],["2025-03",0.651],["2025-04",0.63],["2025-05",0.614],["2025-06",0.591],["2025-07",0.546],["2025-08",0.502],["2025-09",0.406],["2025-10",0.427],["2025-11",0.388],["2025-12",0.305],["2026-01",0.252],["2026-02",0.286],["2026-03",0.391],["2026-04",0.371],["2026-05",0.411],["2026-06",0.427],["2026-07",0.42]],"stress":[{"name":"Anleihecrash 1994","from":"1994-02","to":"1994-06","months":5,"returns":{"cash":0.0239,"bund":-0.0688,"credit":-0.037,"eq_eu":-0.125,"eq_us":-0.1374,"eq_em":-0.1921,"gold":-0.0687},"credit_reconstructed":true},{"name":"Dotcom-Crash","from":"2000-04","to":"2003-03","months":36,"returns":{"cash":0.1257,"bund":0.256,"credit":0.0355,"eq_eu":-0.5017,"eq_us":-0.4942,"eq_em":-0.5085,"gold":0.0313},"credit_reconstructed":true},{"name":"Finanzkrise","from":"2007-11","to":"2009-02","months":16,"returns":{"cash":0.0619,"bund":0.1239,"credit":-0.0504,"eq_eu":-0.5312,"eq_us":-0.4323,"eq_em":-0.5567,"gold":0.3467},"credit_reconstructed":true},{"name":"Euro-Schuldenkrise","from":"2011-05","to":"2011-09","months":5,"returns":{"cash":0.0062,"bund":0.1344,"credit":-0.0298,"eq_eu":-0.1972,"eq_us":-0.0938,"eq_em":-0.1787,"gold":0.146},"credit_reconstructed":false},{"name":"Corona-Schock","from":"2020-02","to":"2020-03","months":2,"returns":{"cash":-0.0007,"bund":0.0041,"credit":-0.0707,"eq_eu":-0.2215,"eq_us":-0.1952,"eq_em":-0.2085,"gold":0.0432},"credit_reconstructed":false},{"name":"Zinswende","from":"2022-01","to":"2022-09","months":9,"returns":{"cash":-0.0023,"bund":-0.1978,"credit":-0.1459,"eq_eu":-0.197,"eq_us":-0.1268,"eq_em":-0.1282,"gold":0.0624},"credit_reconstructed":false}],"signals":{"as_of":"2026-07","aaa5":0.0323,"corr_now":0.42,"classes":{"cash":{"val":0.0,"trend":0.0,"ex12":0.0,"score":0.0,"detail":{}},"bund":{"val":-0.091,"trend":-0.35,"ex12":-0.0317,"score":-0.22,"detail":{"real_yield":0.015,"pct":0.4545,"median":0.0178}},"credit":{"val":-0.369,"trend":-0.207,"ex12":-0.0107,"score":-0.288,"detail":{"spread":0.009,"normal":0.012}},"eq_eu":{"val":-0.812,"trend":1.0,"ex12":0.1676,"score":0.094,"detail":{"cape":23.63,"fair":17.0}},"eq_us":{"val":-1.0,"trend":0.731,"ex12":0.1507,"score":-0.134,"detail":{"cape":35.82,"fair":20.0}},"eq_em":{"val":-1.0,"trend":1.0,"ex12":0.2339,"score":0.0,"detail":{"cape":30.6393,"fair":16.0}},"gold":{"val":-0.984,"trend":0.992,"ex12":0.1966,"score":0.004,"detail":{"pct":0.992}}},"backtest":{"start":"1993-08","end":"2026-07","tactical":{"cagr":0.085216625064227,"vol":0.08596285185511829,"sharpe":0.751903910239528,"mdd":-0.23828955122687068},"reference":{"cagr":0.07463098601129037,"vol":0.08342208930317896,"sharpe":0.6540218285058457,"mdd":-0.2644522518444201},"excess_pa":0.010075937061361662,"te":0.014523327573121797,"ir":0.6937760654802771,"t_stat":3.9854400708201214,"hit_years":0.7058823529411765,"turnover_pa":0.5755528969672042,"path":[["1993-08",1.0402,1.036],["1993-11",1.0786,1.0677],["1994-02",1.1515,1.1276],["1994-05",1.0748,1.0652],["1994-08",1.0803,1.0701],["1994-11",1.053,1.0431],["1995-02",1.0534,1.0398],["1995-05",1.0826,1.0685],["1995-08",1.1308,1.1173],["1995-11",1.1598,1.141],["1996-02",1.2361,1.2143],["1996-05",1.3236,1.2861],["1996-08",1.2932,1.2625],["1996-11",1.4182,1.366],["1997-02",1.5931,1.5067],["1997-05",1.6679,1.5662],["1997-08",1.8238,1.6883],["1997-11",1.7803,1.652],["1998-02",2.0077,1.831],["1998-05",2.0784,1.8811],["1998-08",1.9532,1.758],["1998-11",2.0495,1.8505],["1999-02",2.1641,1.947],["1999-05",2.2954,2.0743],["1999-08",2.2946,2.0768],["1999-11",2.5097,2.2449],["2000-02",2.7485,2.4172],["2000-05",2.7382,2.4193],["2000-08",2.9045,2.5484],["2000-11",2.6917,2.3907],["2001-02",2.5883,2.3018],["2001-05",2.6591,2.3836],["2001-08",2.4976,2.2089],["2001-11",2.5431,2.252],["2002-02",2.597,2.3036],["2002-05",2.5216,2.2343],["2002-08",2.3464,2.0396],["2002-11",2.3662,2.0546],["2003-02",2.2347,1.8997],["2003-05",2.324,1.9883],["2003-08",2.4962,2.1607],["2003-11",2.4988,2.1605],["2004-02",2.6508,2.278],["2004-05",2.6154,2.2568],["2004-08",2.648,2.2837],["2004-11",2.7296,2.3472],["2005-02",2.8656,2.4508],["2005-05",2.9875,2.5507],["2005-08",3.1737,2.6874],["2005-11",3.3469,2.8087],["2006-02",3.5864,2.9649],["2006-05",3.4466,2.871],["2006-08",3.5366,2.9435],["2006-11",3.7103,3.0732],["2007-02",3.7914,3.1321],["2007-05",3.9854,3.2729],["2007-08",3.9137,3.2263],["2007-11",3.905,3.2203],["2008-02",3.758,3.082],["2008-05",3.7591,3.1058],["2008-08",3.6523,2.9894],["2008-11",3.333,2.6164],["2009-02",3.1914,2.4582],["2009-05",3.4338,2.7242],["2009-08",3.6484,2.9236],["2009-11",3.7668,3.0117],["2010-02",4.0117,3.1834],["2010-05",4.3079,3.3698],["2010-08",4.365,3.407],["2010-11",4.5633,3.539],["2011-02",4.6636,3.6124],["2011-05",4.6987,3.6423],["2011-08",4.488,3.4883],["2011-11",4.5761,3.5616],["2012-02",4.9042,3.8323],["2012-05",4.9264,3.8327],["2012-08",5.1496,4.0059],["2012-11",5.2275,4.0616],["2013-02",5.3839,4.1636],["2013-05",5.5754,4.2839],["2013-08",5.4655,4.2137],["2013-11",5.7684,4.3964],["2014-02",5.9053,4.4941],["2014-05",6.099,4.6257],["2014-08",6.3859,4.8185],["2014-11",6.5777,4.9371],["2015-02",7.2969,5.3881],["2015-05",7.4556,5.483],["2015-08",6.8822,5.1443],["2015-11",7.28,5.421],["2016-02",6.8772,5.175],["2016-05",7.1055,5.372],["2016-08",7.348,5.5567],["2016-11",7.3629,5.5794],["2017-02",7.7946,5.8757],["2017-05",7.8599,5.9136],["2017-08",7.7827,5.8672],["2017-11",8.0209,6.0198],["2018-02",7.9762,5.9847],["2018-05",8.1822,6.144],["2018-08",8.3022,6.2174],["2018-11",8.0853,6.077],["2019-02",8.2821,6.2618],["2019-05",8.4278,6.3632],["2019-08",8.9207,6.6797],["2019-11",9.2131,6.8889],["2020-02",8.9793,6.7454],["2020-05",8.7352,6.662],["2020-08",9.1865,6.9941],["2020-11",9.524,7.2805],["2021-02",9.7321,7.435],["2021-05",10.3359,7.8325],["2021-08",10.828,8.1473],["2021-11",10.8814,8.1902],["2022-02",10.5759,7.9701],["2022-05",10.27,7.7065],["2022-08",10.1268,7.5992],["2022-11",10.0956,7.5879],["2023-02",9.9811,7.4879],["2023-05",10.21,7.6781],["2023-08",10.406,7.8216],["2023-11",10.4963,7.9049],["2024-02",11.0908,8.3337],["2024-05",11.4999,8.6106],["2024-08",11.8993,8.8819],["2024-11",12.5511,9.2856],["2025-02",12.8774,9.4988],["2025-05",12.636,9.3599],["2025-08",13.0014,9.6124],["2025-11",13.765,10.0885],["2026-02",14.4588,10.4845],["2026-05",14.9873,10.8142]],"tilts":{"cash":0.0,"bund":0.05,"credit":0.03,"eq_eu":0.05,"eq_us":0.05,"eq_em":0.03,"gold":0.03},"cost":0.001},"ref":{"cash":0.05,"bund":0.2,"credit":0.15,"eq_eu":0.22,"eq_us":0.23,"eq_em":0.08,"gold":0.07},"tilt":{"cash":0.0,"bund":0.05,"credit":0.03,"eq_eu":0.05,"eq_us":0.05,"eq_em":0.03,"gold":0.03}},"validation":[{"key":"eq_eu","etf":"iShares STOXX Europe 600 (EXSA)","months":221,"from":"2008-03","to":"2026-07","corr":0.988,"geo_model":0.0716,"geo_etf":0.0614},{"key":"eq_us","etf":"iShares Core S&P 500 in EUR (SXR8)","months":187,"from":"2011-01","to":"2026-07","corr":0.967,"geo_model":0.1507,"geo_etf":0.1479},{"key":"eq_em","etf":"iShares MSCI EM (EEM), in EUR umgerechnet","months":271,"from":"2004-01","to":"2026-07","corr":0.953,"geo_model":0.1005,"geo_etf":0.0826},{"key":"bund","etf":"iShares eb.rexx Government Germany (EUNH)","months":200,"from":"2010-01","to":"2026-08","corr":0.857,"geo_model":0.0133,"geo_etf":0.0125}],"history":{"start":"1990-08","returns":{"cash":[0.00688,0.00704,0.00706,0.00717,0.0074,0.00768,0.00779,0.00757,0.00758,0.00765,0.00757,0.00755,0.00762,0.00776,0.00772,0.00782,0.00786,0.00798,0.00794,0.00801,0.00808,0.00813,0.00816,0.00813,0.00815,0.00823,0.00792,0.00745,0.00745,0.00753,0.00716,0.007,0.00665,0.0066,0.00626,0.00633,0.00603,0.00551,0.00552,0.00553,0.00526,0.00509,0.00491,0.00492,0.00487,0.00466,0.00433,0.00423,0.00414,0.00417,0.00423,0.00435,0.00434,0.0045,0.0043,0.00425,0.00423,0.0039,0.00382,0.00378,0.0038,0.00372,0.00349,0.00341,0.00334,0.00328,0.00301,0.00279,0.0028,0.00278,0.00274,0.00282,0.00282,0.00274,0.0026,0.0026,0.00266,0.00269,0.00262,0.00266,0.00272,0.00269,0.00264,0.00262,0.00262,0.00272,0.00276,0.00298,0.00312,0.00312,0.00298,0.00293,0.00293,0.00302,0.00302,0.00297,0.00295,0.00292,0.00291,0.00298,0.00302,0.00282,0.00261,0.00258,0.00254,0.00225,0.00215,0.00219,0.00223,0.00225,0.00227,0.00281,0.00289,0.00287,0.00279,0.00295,0.00312,0.00327,0.00364,0.00375,0.00382,0.00398,0.00404,0.0042,0.00424,0.00412,0.00398,0.00396,0.00392,0.0039,0.00386,0.00371,0.00372,0.00363,0.00332,0.003,0.00282,0.00279,0.00278,0.0028,0.00283,0.00284,0.00289,0.00289,0.00284,0.00279,0.00276,0.00272,0.0026,0.00245,0.00236,0.00224,0.00211,0.00211,0.002,0.00179,0.00178,0.00178,0.00179,0.00179,0.0018,0.00179,0.00174,0.00173,0.00169,0.00171,0.00174,0.00176,0.00176,0.00176,0.00177,0.00179,0.00181,0.00181,0.00179,0.00178,0.00178,0.00178,0.00177,0.00176,0.00177,0.00178,0.00178,0.00183,0.00197,0.00206,0.00209,0.00217,0.00227,0.00233,0.00241,0.00249,0.00259,0.00269,0.00278,0.00292,0.003,0.00307,0.00313,0.00318,0.00324,0.00331,0.00339,0.00346,0.00351,0.00379,0.00395,0.00391,0.00387,0.00404,0.00373,0.00364,0.00383,0.00399,0.00405,0.00412,0.00413,0.00414,0.00418,0.00426,0.00353,0.00274,0.00205,0.00162,0.00136,0.00119,0.00107,0.00102,0.00081,0.00072,0.00064,0.00061,0.0006,0.00059,0.00057,0.00055,0.00054,0.00054,0.00057,0.00061,0.00071,0.00075,0.00073,0.00083,0.00087,0.00085,0.00085,0.00091,0.00098,0.0011,0.00119,0.00124,0.00133,0.00129,0.00128,0.00131,0.00124,0.00119,0.00102,0.00087,0.00072,0.00062,0.00057,0.00055,0.00041,0.00028,0.00021,0.00017,0.00016,0.00015,0.00017,0.00019,0.00017,0.00017,0.00017,0.00018,0.00018,0.00019,0.00019,0.00019,0.00019,0.00023,0.00024,0.00024,0.00025,0.00027,0.00027,0.0002,0.00017,0.00016,8e-05,7e-05,7e-05,7e-05,5e-05,4e-05,2e-05,0.0,-1e-05,-1e-05,-2e-05,-2e-05,-3e-05,-4e-05,-7e-05,-0.00011,-0.00012,-0.00015,-0.00019,-0.00021,-0.00021,-0.00022,-0.00025,-0.00025,-0.00025,-0.00026,-0.00026,-0.00026,-0.00027,-0.00027,-0.00027,-0.00028,-0.00027,-0.00028,-0.00028,-0.00027,-0.00027,-0.00027,-0.00027,-0.00027,-0.00027,-0.00027,-0.00027,-0.00027,-0.00027,-0.00027,-0.00027,-0.00027,-0.00027,-0.00026,-0.00026,-0.00026,-0.00026,-0.00026,-0.00026,-0.00026,-0.00026,-0.00027,-0.0003,-0.00034,-0.00035,-0.00034,-0.00033,-0.00033,-0.00033,-0.00034,-0.00035,-0.00021,-0.00023,-0.00031,-0.00037,-0.0004,-0.00041,-0.00042,-0.00043,-0.00045,-0.00046,-0.00045,-0.00045,-0.00045,-0.00045,-0.00045,-0.00045,-0.00046,-0.00045,-0.00046,-0.00047,-0.00048,-0.00047,-0.00044,-0.00041,-0.00037,-0.00032,-0.0002,3e-05,0.00033,0.00084,0.00119,0.00152,0.00172,0.00195,0.0022,0.00243,0.00265,0.00281,0.00295,0.00306,0.00315,0.00323,0.00331,0.00331,0.00328,0.00327,0.00327,0.00327,0.00324,0.00318,0.0031,0.00307,0.00296,0.00286,0.00264,0.00251,0.00235,0.00225,0.0021,0.00204,0.00187,0.00174,0.00165,0.00166,0.00168,0.00169,0.0017,0.0017,0.00171,0.00169,0.00168,0.00176,0.00181,0.00186,0.00195],"bund":[-0.0218,-0.00478,0.0195,0.01945,-0.00818,0.03846,0.02666,-0.00379,0.02199,0.00993,-0.00784,-0.00624,0.02666,0.00997,0.00862,0.01392,0.0206,0.02057,0.00959,0.00076,-0.00184,0.00834,-0.00041,0.0037,0.01245,0.03438,0.02121,0.01069,0.01345,0.0127,0.02475,0.00117,0.00053,0.0006,0.01688,0.01541,0.02992,0.00579,0.02114,0.00635,0.01666,-0.0004,-0.03668,-0.00751,-0.01628,-0.01573,0.00588,0.00726,-0.01254,-0.0121,0.00763,0.01781,-0.00665,0.01919,0.01365,0.0081,0.01704,0.03323,-0.02327,0.0184,0.01275,0.00501,0.02118,0.02332,0.02043,0.01676,-0.03373,0.00408,0.01543,-0.00447,-0.00081,0.01903,0.0026,0.02695,0.00953,0.0263,-0.00086,0.00719,0.03159,-0.02359,0.00938,-0.00372,0.02558,0.01964,-0.0078,0.02038,-0.00053,0.01138,0.02113,0.02343,0.01495,0.00644,-0.01028,0.01804,0.0095,0.01723,0.03549,0.02358,-0.01161,0.01713,0.01145,0.02365,-0.02634,0.00106,0.01955,-0.01888,-0.02984,-0.01149,-0.00968,-0.01091,0.00208,0.00739,-0.00542,-0.01484,0.01284,0.02647,-0.00767,0.01275,0.00663,0.0051,0.00207,0.00814,0.00432,0.01728,0.01802,0.00944,0.00863,0.00471,-0.02196,-0.01014,0.01422,0.01495,0.01336,0.00174,0.03299,-0.00787,-0.02281,0.00723,0.0049,-0.017,0.01346,0.00123,0.01958,0.01104,0.02586,0.02115,-0.01347,0.00306,0.02833,0.01875,0.00744,-0.00376,-0.00523,0.04081,-0.01205,-0.00939,-0.00366,0.00991,-0.01694,-0.00335,0.01479,0.00286,0.02196,0.00906,-0.01396,-0.00348,0.00367,0.01157,0.01794,0.00985,0.01304,0.01219,0.01215,0.01541,-0.00842,0.0031,0.02539,0.01536,0.0128,0.00099,0.00687,-0.00154,-0.01633,0.00286,0.01535,-0.01538,0.00127,-0.01818,-0.01612,0.00736,-0.00789,0.01711,0.01382,0.0146,-0.00588,0.00885,-0.01465,-0.00953,0.01467,-0.00473,-0.01015,-0.00912,-0.00967,0.01876,0.00836,-0.00196,0.01474,0.00989,-0.01625,0.03251,0.00335,0.00175,-0.01328,-0.01371,-0.00951,0.01639,0.02678,0.00508,0.01712,0.0487,0.02377,-0.02764,0.01538,0.00867,-0.01197,-0.02291,0.01872,0.00962,0.01705,0.00286,-0.00536,0.01872,-0.01608,0.01705,0.00865,0.00444,0.01112,0.03505,0.00836,-0.00618,0.05955,-0.01121,-0.02462,-0.01307,-0.0211,-0.01152,0.00526,-0.01458,0.01036,0.02379,0.00599,0.0334,0.04171,0.02321,-0.01667,-0.01373,0.04755,0.00164,0.00343,-0.00016,0.01876,0.04017,-0.0305,0.02712,0.00028,-0.0061,-0.00419,0.01324,0.00951,-0.02337,0.01325,0.01974,0.00665,-0.02182,-0.02132,0.00145,-0.01464,0.0124,0.00783,-0.00485,-0.0242,0.0361,0.00687,0.0032,0.005,0.01879,0.01134,0.01038,0.0255,-0.00297,0.01027,0.01407,0.01502,0.02482,0.00224,0.01105,-0.01343,-0.01894,-0.02794,0.01792,-0.0023,0.01018,0.01015,0.00236,-0.01964,0.03563,0.02296,-0.00188,-0.01163,0.00807,0.03112,0.00088,0.00088,0.00488,-0.03365,-0.00676,-0.00179,-0.02303,0.02788,-0.01446,-0.0007,0.00126,-0.01422,-0.00634,0.01992,-0.01035,0.00523,-0.00063,-0.00545,-0.01966,-0.00038,0.01696,-0.00628,0.01599,0.00619,-0.00453,0.00814,-0.01323,0.00914,0.00715,0.0081,0.01103,-0.00087,0.02203,-0.00996,0.02308,0.01093,0.01193,0.02851,-0.01492,-0.0157,-0.00541,-0.01835,0.02318,0.01913,-0.01476,0.00267,-0.00955,0.00883,0.00674,-0.01771,0.01603,0.00672,-0.00462,-0.00254,-0.00354,-0.02762,-0.00023,-0.00624,-0.00418,0.00588,0.02526,-0.00243,-0.02249,-0.01019,0.02624,-0.01641,-0.01614,-0.02269,-0.04026,-0.02324,-0.02365,-0.03305,0.05219,-0.05501,-0.0519,-0.00443,0.02417,-0.04958,0.02405,-0.03002,0.02845,0.00194,0.00809,-0.0112,-0.00581,0.00294,-0.02863,0.00835,0.03279,0.03668,-0.01415,-0.0216,0.01784,-0.018,-0.01078,0.02136,0.01431,0.00633,0.00983,-0.01994,0.02945,-0.02264,-0.00494,0.00992,-0.02631,0.02223,-0.00398,-0.00304,-0.0064,0.00141,0.00056,0.0083,-0.00291,-0.01216,0.00412,0.01612,-0.02638,-0.00417,0.01445,0.01185,-0.02106],"credit":[-0.02981,-0.01868,0.01961,0.00803,0.00137,0.02539,0.02625,0.00727,0.02335,0.0126,-0.00476,0.01338,0.01465,0.00997,0.00401,-0.00013,0.01863,0.01495,0.01337,0.00405,0.013,0.01541,-0.00194,-0.00928,0.00394,0.01455,0.00381,0.02097,0.01233,0.01532,0.02003,0.01606,0.00271,0.00779,0.01047,0.01934,0.02948,-0.00285,0.0189,0.00874,0.02459,0.01789,-0.01831,-0.00929,0.00478,-0.01463,5e-05,0.00732,0.00124,-0.01008,0.00911,0.00425,0.00457,0.00338,0.00882,0.00063,0.01138,0.02348,-0.00551,0.01584,0.00787,0.01109,0.00408,0.01165,0.01726,0.01293,-0.00725,0.00669,0.01285,0.00659,0.00163,0.00341,0.00482,0.01818,0.01107,0.0179,0.01054,0.01051,0.02384,-0.00132,0.0063,0.00753,0.02138,0.02285,-0.00635,0.0204,-0.00991,0.00544,0.0201,0.02154,0.02147,0.01907,0.00076,0.00956,0.00695,0.01237,-0.00686,-0.00591,0.0025,0.0219,0.01062,0.01592,-0.00661,0.0071,0.01763,-0.01052,-0.00475,-0.00729,0.00242,-0.00484,0.00949,0.01674,0.01816,-0.01235,0.01959,0.01719,-0.00187,0.00323,0.00168,0.00824,0.00787,6e-05,0.00752,-0.0036,0.00793,0.00805,-0.0088,-0.00442,0.00685,-0.00231,0.0016,0.00148,-0.00377,-0.0176,0.02308,0.00934,-0.00224,-0.00059,0.00399,0.00259,0.00061,-0.00455,-0.00572,-0.01017,0.01123,-0.01468,0.01196,0.01049,-0.00198,-0.00304,-0.00144,-0.00499,0.01866,0.0197,0.00476,0.00196,0.00624,-0.00195,0.00591,0.00169,0.01014,0.01018,0.01457,0.00101,-0.00291,-0.00196,0.00647,0.00133,0.00748,0.00747,0.00849,0.01007,0.00895,0.01291,0.00277,0.00154,0.00638,0.01644,0.01261,0.00843,0.00596,0.00566,-0.01138,0.00875,0.01395,0.00189,0.00677,-0.00194,-0.00182,-0.00656,0.00053,0.00972,0.01118,0.0119,0.00626,0.00533,0.00298,0.00282,0.00361,0.00585,0.00456,0.00388,-0.0023,0.00328,0.00219,0.00432,0.01308,-0.00445,-0.00716,-0.00451,0.00356,-0.00406,0.00869,-0.00091,-0.01987,0.00382,0.01527,-0.01835,-0.01378,0.00902,0.00688,-0.0158,-0.00916,0.0069,0.02123,0.01839,0.00739,0.03418,0.00862,0.01327,0.00852,0.00732,-0.02266,0.01664,0.00575,0.00987,0.00523,-0.01859,0.00052,0.01216,0.01682,-0.00219,-0.00144,-0.01448,-0.02526,0.00044,0.00828,-0.00245,0.00491,0.01221,-0.02205,0.00793,-0.01896,-0.00882,0.02183,-0.02937,0.00698,0.02951,0.01879,0.00789,-0.00374,0.00393,-0.01591,0.02274,0.00862,0.01048,0.01128,0.00853,-0.00695,-0.01364,0.0127,0.00533,0.01329,-0.00314,-0.01575,0.00898,-0.00379,0.00761,0.0115,0.00235,-0.00402,0.0126,0.00496,0.00445,0.00926,0.00798,0.00649,0.00526,0.01117,0.0011,0.00461,0.0053,0.00564,0.00864,0.00587,-0.00169,-0.00538,-0.0048,-0.02032,0.014,-0.00749,-0.01057,0.01751,0.00583,-0.00765,0.00582,0.00444,0.01462,0.00272,0.00187,0.011,0.0169,0.00174,-0.00144,-0.00851,-0.0108,0.00752,-0.00593,0.01123,-0.00439,0.00612,0.00322,-0.00552,0.00809,0.00463,-0.00207,0.01099,-0.0016,-0.00282,-0.00379,-0.00015,-0.00108,0.00038,-0.00409,-0.00016,0.0044,-0.00078,-0.00256,-0.00311,-0.00577,0.00196,0.0134,0.00614,0.01366,0.00648,-0.00303,0.01685,0.01363,0.00548,-0.00693,-0.00207,-0.00231,-0.00067,0.01194,-0.00888,-0.0624,0.03423,0.00385,0.01342,0.01135,0.00316,0.00225,0.00561,0.01159,0.00257,-0.00256,-0.00823,0.00484,-0.00185,-0.00204,0.00383,0.01131,-0.00422,-0.00657,-0.00728,0.00134,0.0009,-0.01654,-0.02353,-0.01388,-0.02776,-0.01139,-0.03621,0.05448,-0.04987,-0.02825,-0.00361,0.03183,-0.01328,0.01604,-0.01736,0.01547,0.00407,0.00069,-0.0025,0.00821,0.00052,-0.00913,0.00465,0.02464,0.02746,-0.00192,-0.00787,0.01347,-0.01018,0.00255,0.00695,0.01722,0.00245,0.01244,-0.00424,0.01792,-0.0059,0.00529,0.00541,-0.01028,0.01038,0.00563,0.00223,0.00518,-0.00041,0.00482,0.00629,-0.00164,-0.00099,0.0072,0.00417,-0.0214,0.0089,0.00891,0.00449,-0.00977],"eq_eu":[-0.1391,-0.11596,0.03971,-0.02354,-0.00117,0.02772,0.05737,0.02079,0.05254,0.0198,-0.03588,0.05932,-0.005,0.00501,-0.02431,-0.05859,0.02876,0.00829,0.02357,-0.00834,0.0456,0.03658,-0.03899,-0.08758,-0.03468,-0.02468,-0.05332,0.06446,0.01161,0.02913,0.03025,0.06015,-0.00955,0.01808,-0.00106,0.05003,0.07509,-0.04643,0.03858,0.01522,0.08022,0.08132,-0.03644,-0.05035,0.04522,-0.06056,-0.0261,0.0109,0.02087,-0.04169,0.01983,-0.02902,0.02548,-0.03734,0.00497,-0.02737,0.01186,0.04403,0.00865,0.03501,0.00378,0.03831,-0.03369,0.00312,0.04012,0.02473,0.02508,0.02019,0.02913,0.03817,0.00344,-0.02999,0.0131,0.03351,0.03302,0.03402,0.05229,0.03466,0.05479,0.03688,0.00698,0.04196,0.05427,0.07518,-0.02436,0.05988,-0.05995,-0.0031,0.05498,0.05785,0.07631,0.08182,0.01834,0.00475,0.00895,0.02203,-0.12176,-0.09084,0.03078,0.07397,0.02468,0.02807,0.01421,0.0298,0.04734,-0.02158,0.03375,-0.01974,0.02894,-0.00793,0.04181,0.06756,0.10257,-0.0428,0.07143,0.02834,-0.00232,-0.01923,-0.01596,0.02249,0.02673,-0.02943,0.01906,-0.0699,-0.00906,0.0106,-0.07864,-0.0463,0.07256,-0.0026,-0.0337,-0.03528,-0.06045,-0.11018,0.04478,0.05947,0.02953,-0.02615,0.00377,0.0433,-0.03317,-0.03491,-0.08106,-0.08682,-0.0023,-0.13268,0.08676,0.04334,-0.07839,-0.0629,-0.02945,-0.02413,0.1081,0.01452,0.04771,0.0276,0.03858,-0.03521,0.06534,0.01317,0.01992,0.04587,0.02878,-0.01704,0.01142,-0.00608,0.02421,-0.02086,-0.00117,0.0162,0.01487,0.02519,0.01911,0.03357,0.02996,-0.00153,-0.02327,0.05297,0.03771,0.04051,0.01439,0.03088,-0.02987,0.03793,0.03873,0.03903,0.02955,0.02386,0.01962,-0.057,0.01412,0.00981,0.02446,0.02625,0.03934,0.00202,0.03956,0.02735,-0.02073,0.03303,0.03744,0.03122,-0.00146,-0.03267,-0.01646,0.01625,0.02718,-0.05739,-0.01563,-0.10704,0.00091,-0.03667,0.06421,0.01238,-0.09996,-0.02736,0.01241,-0.1235,-0.1248,-0.06931,-0.02424,-0.03343,-0.08725,0.01623,0.13963,0.06272,-0.0211,0.10159,0.04668,0.02769,-0.02891,0.01471,0.05274,-0.02296,0.00757,0.07138,-0.00439,-0.04836,-0.00679,0.05389,-0.01622,0.03657,0.03406,-0.01941,0.06079,0.01191,0.02012,-0.02781,0.03388,0.00141,-0.02511,-0.02022,-0.11272,-0.05411,0.07023,-0.00705,0.01421,0.03779,0.04297,0.00672,-0.01179,-0.06576,0.05539,0.03065,0.018,0.00947,0.01177,0.02335,0.0176,0.0341,0.00637,0.01977,0.02032,0.01563,-0.05179,0.05872,-0.004,0.0491,0.03448,0.01553,0.01034,-0.01057,0.0511,-0.0036,0.01314,0.0257,-0.00493,-0.021,0.01428,0.00836,-0.02242,0.02455,-0.00987,0.07062,0.06824,0.02089,0.00529,0.0208,-0.04742,0.04463,-0.08098,-0.04167,0.07983,0.02589,-0.04627,-0.06703,-0.01401,0.02061,0.02228,0.01854,-0.04545,0.04357,0.00628,0.00708,-0.01156,0.00361,0.05684,0.00833,0.02222,0.03383,0.02391,0.02365,-0.02273,0.00778,-0.0063,0.02975,0.02133,-0.01712,0.00341,0.01695,-0.03355,-0.01453,0.0439,0.00574,-0.00431,0.02166,-0.01779,0.0092,-0.06261,-0.01487,-0.0516,0.06048,0.0376,0.02393,0.04067,-0.0456,0.03916,-0.00365,-0.01221,0.03711,0.00963,0.03486,0.01872,-0.00813,-0.08237,-0.15158,0.07485,0.02978,0.03474,-0.01706,0.04151,-0.01037,-0.04629,0.13885,0.03174,-0.00152,0.02727,0.06665,0.02179,0.03501,0.00963,0.0203,0.01939,-0.02898,0.03609,-0.01915,0.05514,-0.03948,-0.04139,0.0055,-0.00849,-0.00336,-0.07443,0.07292,-0.04639,-0.07314,0.051,0.07902,-0.03458,0.06808,0.00964,-0.00011,0.02848,-0.02699,0.02838,0.01434,-0.02783,-0.02071,-0.04126,0.0652,0.04354,0.00854,0.01793,0.03834,-0.012,0.04108,-0.01536,0.00792,0.01033,-0.00102,-0.02897,0.0099,-0.00419,0.06159,0.02832,-0.03553,-0.00798,0.05596,-0.0029,0.0009,0.01579,0.00832,0.02431,0.00915,0.02283,0.02121,0.04348,-0.06581,0.04909,0.03935,0.01632,0.01063],"eq_us":[-0.13181,-0.05516,-0.04152,0.04247,0.03927,0.05975,0.05629,0.12271,0.05877,0.05182,-0.01028,0.04871,0.00379,-0.03977,0.0147,-0.0771,0.07263,0.00758,0.03915,0.00285,0.00659,-0.01054,-0.05024,-0.01285,-0.05001,0.01723,0.03601,0.11566,0.0147,0.03219,0.02018,0.02895,-0.05773,0.03801,0.03528,0.03583,0.02679,-0.04145,0.02806,0.01978,0.02479,0.05055,-0.02738,-0.06974,0.01398,-0.01589,-0.04456,-0.00683,0.04204,-0.02882,-0.00214,-0.02386,0.03405,-0.00473,0.02126,-0.03917,0.00734,0.05567,0.02575,0.03223,0.05167,0.04831,-0.04144,0.04601,0.03199,0.04322,0.01956,0.01868,0.04379,0.04693,-0.01002,-0.07099,0.01813,0.07257,0.02613,0.0555,0.01419,0.08954,0.04268,-0.03456,0.05537,0.06775,0.05873,0.11868,-0.01215,0.02687,-0.04932,0.01898,0.04543,0.02712,0.07172,0.06015,0.00395,-0.04704,0.04621,-0.01758,-0.16122,0.01404,0.03454,0.09276,0.05713,0.0683,-0.00532,0.0658,0.06143,-0.008,0.06473,-0.06426,0.00153,-0.03222,0.0864,0.07429,0.08649,-0.01838,0.03706,0.07461,-0.01084,-0.06142,0.02298,0.01319,0.11599,-0.03401,0.01823,-0.12951,-0.05106,0.03924,-0.0921,-0.02442,0.07783,0.05717,-0.0166,-0.04914,-0.10223,-0.08691,0.03711,0.09443,0.02741,0.00711,-0.02328,0.03497,-0.08053,-0.05208,-0.12576,-0.06235,0.00128,-0.10446,0.07936,0.05407,-0.10688,-0.05437,-0.0148,0.0014,0.05984,-0.00064,0.05029,0.03386,0.06064,-0.0731,0.06424,-0.01726,-0.00886,0.04251,0.01182,0.00338,0.00548,-0.00843,0.02291,-0.03014,-0.00416,-0.00733,-0.01085,0.00287,0.01101,0.01789,0.00331,0.00491,-0.02347,0.09164,0.02803,0.04151,-0.01753,0.02075,-0.01615,0.06163,-0.00158,0.00642,0.02087,-0.00087,-0.02401,-0.05622,0.0127,-0.00791,0.0178,0.03793,0.03336,-0.01779,0.01481,0.03518,-0.03495,0.00327,0.01738,0.04811,-0.01939,-0.04745,0.01375,0.00079,0.00216,-0.06492,-0.0033,-0.07061,-0.0486,-0.04818,0.06624,0.02261,-0.0975,0.00374,0.07704,-0.06458,-0.07076,-0.07492,-0.06932,-0.00194,-0.08907,0.0359,0.10454,-0.00932,0.00174,0.0772,0.0237,0.01453,-0.03564,0.04062,0.07213,-0.00305,0.06407,0.07028,0.03256,-0.00346,-0.05273,0.00717,-0.02156,0.01789,0.02313,0.07248,0.0392,-0.00468,0.02428,-0.02178,-0.01622,0.0199,-0.02202,-0.01028,-0.07187,-0.01098,0.0737,0.04063,0.0448,0.0316,0.02346,0.03792,0.00215,-0.00024,0.02347,0.03301,-0.00109,0.00205,-0.02226,0.00844,-0.00405,0.02796,0.04528,0.06672,-0.00514,0.03322,-0.01759,0.04098,-0.02416,0.01695,0.03131,0.03337,0.01468,-0.01353,0.0241,0.00612,-0.00627,0.03872,0.02217,0.00013,0.0575,0.02754,0.02993,0.02897,0.02765,0.04066,0.06744,0.03311,-0.035,0.03634,-0.03448,0.03626,-0.08098,-0.02956,0.09569,0.04734,-0.04909,-0.06015,0.00254,0.023,0.00771,0.04062,0.00458,0.03857,0.00338,0.00029,-0.00065,0.07937,0.02748,-0.00049,0.05135,-0.00681,-0.01081,-0.01493,-0.00838,-0.00788,-0.00561,0.02745,0.03827,0.01362,-0.00065,0.01753,-0.01611,-0.03079,0.02422,0.06139,0.00984,0.02673,0.04366,0.00859,-0.05351,0.01522,-0.1008,0.08221,0.04253,0.02922,0.04338,-0.06149,0.05013,0.03503,-0.01373,0.02961,-0.00209,0.05619,0.00602,0.01667,-0.07402,-0.13084,0.14436,0.03115,0.01893,0.00033,0.06801,-0.0172,-0.01986,0.09813,0.02159,0.01042,0.02937,0.06654,0.01849,-0.00678,0.05481,0.0128,0.03436,-0.02295,0.06026,0.00863,0.03577,-0.0473,-0.02655,0.0399,-0.04588,-0.0192,-0.05463,0.11682,-0.01671,-0.06801,0.0627,0.00267,-0.08604,0.05311,-0.0026,0.00419,-5e-05,0.03509,0.0506,0.02184,-0.00511,-0.02338,-0.02909,0.062,0.04146,0.03189,0.05597,0.03413,-0.03349,0.03476,0.04627,0.00515,-0.00305,0.01126,0.02258,0.10128,-0.01181,0.0313,-0.02279,-0.0956,-0.05372,0.06759,0.0178,0.04769,0.00361,0.02987,0.03986,0.00066,-0.01586,-0.00107,0.00067,-0.02351,0.08318,0.05744,0.01397,-0.0106],"eq_em":[-0.16221,-0.11036,-0.01309,-0.06137,0.01588,0.03286,0.10652,0.11945,0.06237,0.0602,0.00081,0.01617,-0.01799,-0.05832,0.04942,-0.04151,0.05016,0.10102,0.07391,0.00285,-0.01376,-0.0195,-0.10238,-0.05334,-0.06224,-0.00693,0.07059,0.06371,0.01909,0.01392,0.05068,0.03778,0.01149,0.05029,0.03466,0.07512,0.07163,0.00383,0.10897,0.10157,0.19167,0.00756,-0.01403,-0.13628,0.00192,-0.00633,-0.04712,0.02612,0.1198,0.01564,-0.04697,-0.03064,-0.0718,-0.14678,-0.013,-0.06519,0.00783,0.07986,-0.00069,0.02094,0.01617,0.00549,-0.06517,-0.0091,0.05141,0.10611,-0.02093,0.01948,0.044,0.00486,0.00843,-0.07001,0.01665,0.03249,-0.00497,0.00444,0.0337,0.1067,0.09758,-0.00987,-0.01,0.02752,0.06147,0.04652,-0.08928,-0.01235,-0.17232,-0.06756,0.02725,-0.04181,0.10304,0.04946,-2e-05,-0.12283,-0.09315,0.02524,-0.24979,-0.01068,0.04206,0.09328,-0.02483,0.01295,0.03549,0.11924,0.12205,0.02544,0.11981,-0.04765,0.03976,-0.03847,0.05426,0.12512,0.12388,0.03456,0.03756,0.02346,-0.06279,-0.04882,-0.00486,-0.01421,0.03805,-0.0778,-0.04863,-0.11255,-0.05461,0.12155,-0.06065,-0.03845,0.03415,0.05779,-0.0179,-0.09572,-0.05863,-0.14147,0.06336,0.11607,0.09284,0.05181,0.01146,0.05718,-0.02882,-0.06081,-0.12821,-0.04237,0.00616,-0.11234,0.06037,0.05447,-0.07943,-0.02945,-0.02594,-0.04214,0.07002,0.00906,0.09643,0.06112,0.10383,-0.04637,0.07757,-0.01919,0.02011,0.05689,0.04344,0.03294,-0.047,-0.03968,0.00926,-0.00884,0.03521,0.03406,0.0026,0.04013,0.03053,0.05363,0.06791,-0.03732,-0.02527,0.08607,0.0575,0.06681,0.00141,0.10108,-0.05671,0.10157,0.06008,0.07359,0.02557,-0.00803,0.03855,-0.12198,0.00167,0.00842,0.02347,0.02585,0.04363,0.0353,0.04868,0.00925,-0.0172,0.03482,0.02814,0.06773,0.04277,0.04398,-0.02956,0.05598,0.07842,-0.08714,0.01535,-0.1306,0.04875,-0.08626,0.09046,0.0221,-0.10901,-0.0312,-0.02573,-0.15441,-0.18411,-0.07593,-0.01774,0.0163,-0.03769,0.08065,0.17281,0.11093,-0.01651,0.11069,-0.00909,0.06638,-0.01308,0.02643,0.09122,-0.01543,0.03597,0.0885,0.0277,-0.01406,0.00073,0.01866,0.01265,0.03332,0.01437,0.04189,0.04328,-0.04723,-0.02699,0.0274,-0.00828,0.00647,-0.01914,0.01708,-0.10266,-0.08846,0.08161,-0.02291,0.02375,0.09151,0.04218,-0.02288,-0.00553,-0.04499,0.0213,0.03844,-0.02047,0.0318,-0.01152,0.01144,0.03443,-0.00923,0.0235,0.0129,-0.00975,-0.01392,-0.06969,0.00088,-0.02195,0.04665,0.03211,-0.01243,-0.01779,-0.03985,0.01363,0.02736,0.0011,0.05735,0.02675,0.038,0.0365,-0.01732,0.00943,-0.00805,-0.01255,0.08233,0.03153,0.03363,0.02928,-0.00691,-0.04251,-0.04832,-0.10787,-0.01945,0.08918,0.01214,-0.04403,-0.06543,-0.00298,0.07187,0.011,-0.01346,0.04618,0.04566,0.02255,0.00977,0.01801,-0.01687,0.01326,0.03146,0.05013,0.01906,-0.00455,-0.00197,-0.00917,0.02481,0.01204,-0.00079,0.04781,-0.0129,0.02376,0.03737,-0.02437,-0.02306,0.01483,0.00223,-0.03984,0.01282,-0.01839,-0.0054,-0.06598,0.04063,-0.02828,0.07124,0.00953,0.02617,0.01874,-0.05576,0.03455,0.0038,-0.03454,0.03519,0.01461,0.01282,0.04649,-0.02927,-0.04854,-0.16811,0.1089,-0.00714,0.06716,0.02349,0.0177,0.00238,0.01757,0.07547,0.04892,0.03246,0.02186,0.02705,-0.00073,0.01421,0.03294,-0.05506,0.02813,-0.00966,0.0002,-0.01177,0.02735,-0.00679,-0.03303,-0.00701,-0.00217,-0.0133,-0.03782,0.02179,0.02939,-0.08258,-0.03405,0.07816,-0.03828,0.04976,-0.03422,0.00214,-0.01342,0.01669,0.02366,0.04273,-0.03523,0.00329,-0.04176,0.04684,0.02791,-0.02195,0.04116,0.01781,0.01463,-0.00237,0.04343,-0.00652,-0.01008,0.0479,-0.0086,-0.00051,0.01269,0.00981,-0.00502,-0.03225,-0.03556,0.05245,0.02332,0.03991,0.00322,0.04774,0.05175,-0.02212,0.00934,0.06202,0.06206,-0.09722,0.11934,0.08287,0.00467,-0.04652],"gold":[0.04343,-0.01525,-0.04945,-0.02244,-0.00479,0.02598,-0.07005,0.08596,0.04159,0.00728,0.06561,0.00407,-0.05521,-0.04789,0.02622,-0.03788,-0.0303,-0.01221,0.02521,-0.00243,-0.02183,-0.02205,-0.01925,-0.01826,-0.05693,0.00854,0.02025,0.04098,-0.00334,0.00208,0.01672,0.00622,0.00477,0.08029,0.04365,0.09261,-0.04517,-0.1034,0.03711,0.06505,0.03009,0.02941,-0.01694,-0.0206,-0.01387,-0.01432,-0.00486,-0.03919,-0.01475,0.02136,-0.02411,-0.00236,0.00749,-0.02634,-0.02348,-0.05156,0.00543,0.0049,0.00179,-0.0141,0.03565,0.0074,-0.03137,0.00735,0.02172,0.0474,0.0174,-0.01509,0.01042,0.01602,-0.02055,-0.02192,-0.00294,0.00662,0.00777,-0.0182,0.00247,-0.00559,0.0201,0.02646,-0.01275,-0.00415,0.00459,-0.01345,0.0257,-0.03224,-0.00998,-0.07196,-0.0302,0.02119,0.02531,0.00483,0.03257,-0.04951,-0.01378,0.00611,-0.03649,-0.03245,-0.01249,0.02029,-0.01442,0.01128,0.03322,0.02212,0.00305,-0.01158,-0.04263,-0.05273,0.0154,0.02223,0.19739,-0.02466,-0.02923,0.02967,0.06471,-0.0306,0.02945,-0.04087,0.01247,0.0194,0.01013,0.01435,0.02,-0.02312,-0.06017,-0.02227,0.00941,0.01217,0.02603,0.04421,0.01998,-0.03358,-0.0284,0.06875,-0.03471,-0.00418,0.02734,0.03283,0.05005,0.01135,-0.01136,0.0143,-0.09642,-0.01387,0.0251,0.01513,-0.0004,-0.0101,0.02869,0.03725,-0.04615,-0.05078,-0.01188,0.01208,0.00332,0.01108,0.09928,-0.03801,0.00024,-2e-05,-0.00512,-0.01326,0.00668,0.06917,-0.07331,-0.00286,-3e-05,0.00552,0.02455,0.01402,-0.00295,0.009,-0.05378,0.00746,0.01752,0.00433,0.01524,0.03018,0.0423,-0.01385,0.00039,0.09515,-0.00675,0.08638,0.04301,0.04015,0.03728,0.01637,0.08162,-0.03962,-0.03349,0.02937,-0.01954,-0.02919,0.01055,0.02566,-0.01585,0.04356,0.00671,-0.01752,-0.00637,-0.00669,-0.02329,0.01095,0.01218,0.06682,0.04646,-0.03338,0.07027,0.09409,0.03291,-0.09595,-0.0418,0.03052,0.01352,0.00953,-0.03862,0.08598,-0.08068,0.14136,-0.00999,0.13961,0.02033,-0.07698,-0.01536,0.03476,-0.05523,0.0284,-0.01147,0.03232,0.02051,0.07166,0.00983,0.02001,0.06273,0.00225,0.07306,0.11133,0.03049,-0.10635,0.08091,-0.02265,0.02205,0.088,-0.00189,-0.08405,0.04576,-0.0058,0.03386,0.00977,-0.01693,0.09854,0.10818,-0.05166,0.02621,0.05634,-0.06974,0.06548,-0.01351,-0.01738,-0.01988,0.02845,0.01093,0.03028,0.018,0.02541,-0.03497,-0.00331,-0.03653,-0.03453,-0.01946,0.03642,-0.09573,-0.04927,-0.12618,0.05664,0.06699,-0.06435,-0.01688,-0.05307,-0.02698,0.02626,0.04265,-0.027,0.00499,-0.02142,0.0357,0.01013,0.01805,-0.0133,-0.02799,0.0068,0.03578,0.15976,-0.0538,0.03272,-0.04595,0.02839,-0.03433,-0.04647,0.01066,-0.01317,0.04058,-0.0138,-0.04689,0.04973,0.1085,-0.04342,0.04291,0.00589,0.04422,0.0222,-0.03286,0.00229,-0.01281,-0.05227,-0.00901,0.03364,0.0482,-0.01299,-0.00712,-0.02139,-0.04093,-0.00655,0.03055,-0.0248,0.01404,-0.02379,0.01368,-0.01315,0.002,-0.00318,0.01703,0.01776,-0.03415,-0.0316,-0.00886,-0.0009,0.04065,0.00288,0.03929,0.02897,0.00105,0.00079,-0.00639,0.02405,0.05784,0.03241,0.07631,0.00274,-0.01829,-0.01512,0.01348,0.05892,-0.00513,0.04853,0.03648,0.01579,0.02217,0.03033,0.00028,-0.02302,-0.00738,-0.03284,-0.00636,-0.01438,-0.06299,0.0248,0.00097,0.06576,-0.04397,0.02254,-0.01326,0.00882,0.00956,0.0189,0.03438,-0.00342,0.05482,0.03457,0.03296,-0.05151,0.01141,-0.00649,-0.00143,-0.00636,-0.03515,0.0168,0.0175,0.01164,-0.00142,0.0468,0.00549,0.0098,-0.03411,0.00676,0.01189,-0.02621,0.04234,0.0155,0.00559,0.00814,0.00409,0.08068,0.04757,-0.00377,0.02102,0.02536,0.01733,0.03031,0.0756,-0.00429,0.025,0.0495,0.01105,0.05534,0.01071,-0.00613,-0.01557,0.00763,0.04827,0.09377,0.04853,0.06355,0.00428,0.07757,0.05056,-0.00435,-0.04994,-0.00296,-0.10143,0.0089]},"credit_reconstructed_until":"2009-04"}}</script>
+<script>
+"use strict";
+(function () {
+  const M = JSON.parse(document.getElementById("model").textContent);
+  const A = M.assets;
+  const K = A.map(a => a.key);
+  const N = K.length;
+  const idx = Object.fromEntries(K.map((k, i) => [k, i]));
+
+  // ---------------------------------------------------------------- formatting
+  const nf = (d) => new Intl.NumberFormat("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const pct = (x, d = 1) => (x == null || isNaN(x)) ? "–" : nf(d).format(x * 100) + " %";
+  const spct = (x, d = 1) => (x > 0 ? "+" : x < 0 ? "−" : "") + nf(d).format(Math.abs(x * 100)) + " %";
+  const num = (x, d = 2) => nf(d).format(x);
+  const eur = (x) => {
+    const a = Math.abs(x);
+    if (a >= 1e6) return nf(1).format(x / 1e6) + " Mio. €";
+    if (a >= 1e3) return nf(0).format(x / 1e3) + " Tsd. €";
+    return nf(0).format(x) + " €";
+  };
+  const monthName = (ym) => {
+    const [y, m] = ym.split("-").map(Number);
+    return ["Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."][m - 1] + " " + y;
+  };
+  const color = (k) => `var(--c-${k})`;
+  const name = (k) => A[idx[k]].name;
+  const SHORT = { cash: "Geldmarkt", bund: "Bundesanleihen", credit: "Unternehmensanl. IG", eq_eu: "Aktien Europa", eq_us: "Aktien USA", eq_em: "Schwellenländer", gold: "Gold" };
+
+  // ---------------------------------------------------------------- linear algebra
+  const dot = (a, b) => a.reduce((s, x, i) => s + x * b[i], 0);
+  const mv = (S, w) => S.map(r => dot(r, w));
+  const quad = (S, w) => dot(w, mv(S, w));
+  function solveLin(Amat, b) {
+    const n = b.length, Mx = Amat.map((r, i) => [...r, b[i]]);
+    for (let c = 0; c < n; c++) {
+      let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(Mx[r][c]) > Math.abs(Mx[p][c])) p = r;
+      [Mx[c], Mx[p]] = [Mx[p], Mx[c]];
+      for (let r = 0; r < n; r++) if (r !== c) { const f = Mx[r][c] / Mx[c][c]; for (let j = c; j <= n; j++) Mx[r][j] -= f * Mx[c][j]; }
+    }
+    return Mx.map((r, i) => r[n] / r[i]);
+  }
+
+  // ---------------------------------------------------------------- state
+  const REF = { cash: 0.05, bund: 0.20, credit: 0.15, eq_eu: 0.22, eq_us: 0.23, eq_em: 0.08, gold: 0.07 };
+  const wRef = K.map(k => REF[k]);
+  const LB = K.map(() => 0);
+  const UB = K.map(k => ({ cash: 0.40, bund: 0.60, credit: 0.30, eq_eu: 0.40, eq_us: 0.45, eq_em: 0.15, gold: 0.10 })[k]);
+  const baseExp = A.map(a => a.expected);
+  const state = { vol: 0.08, regime: "pos", conf: 0.25, exp: baseExp.slice(), edit: false, w0: 1e7, wd: 0.03, h: 20 };
+
+  const SIG = { all: M.cov.all, pos: M.cov.pos, neg: M.cov.neg };
+  const REGIME_LABEL = { pos: "Inflationsregime", all: "Gesamtstichprobe", neg: "Wachstumsregime" };
+
+  // arithmetic expected returns from geometric CMA: mu_a = mu_g + sigma^2/2
+  const arith = (exp, S) => exp.map((g, i) => g + S[i][i] / 2);
+
+  function blendedMu(S) {
+    const mu = arith(state.exp, S);
+    const rf = mu[idx.cash];
+    const vRef = quad(S, wRef);
+    const delta = Math.max((dot(mu, wRef) - rf) / vRef, 0.5);
+    const pi = mv(S, wRef).map(x => rf + delta * x);
+    return mu.map((m, i) => state.conf * m + (1 - state.conf) * pi[i]);
+  }
+
+  // projection onto {sum w = 1, LB <= w <= UB}
+  function project(v) {
+    let lo = Math.min(...v.map((x, i) => x - UB[i])), hi = Math.max(...v.map((x, i) => x - LB[i]));
+    for (let it = 0; it < 60; it++) {
+      const t = (lo + hi) / 2;
+      const s = v.reduce((a, x, i) => a + Math.min(UB[i], Math.max(LB[i], x - t)), 0);
+      if (s > 1) lo = t; else hi = t;
+    }
+    const t = (lo + hi) / 2;
+    return v.map((x, i) => Math.min(UB[i], Math.max(LB[i], x - t)));
+  }
+  // Exact solver for  max mu'w - lam/2 w'Sw  s.t. sum w = 1, LB <= w <= UB.
+  // Primal active-set method (Nocedal and Wright, Algorithm 16.3) on the
+  // equivalent minimisation f(w) = -mu'w + lam/2 w'Sw. Starts from a feasible
+  // point, moves along the equality-constrained Newton step, adds blocking
+  // bounds and drops bounds with negative multipliers. Exact for seven assets.
+  function solveQP(mu, S, lam, wStart) {
+    let w = project(wStart ? wStart.slice() : K.map(() => 1 / N));
+    const act = K.map((_, i) => (w[i] <= LB[i] + 1e-12 ? -1 : w[i] >= UB[i] - 1e-12 ? 1 : 0));
+    for (let iter = 0; iter < 200; iter++) {
+      const Sw = mv(S, w);
+      const g = K.map((_, i) => -mu[i] + lam * Sw[i]);
+      const F = K.map((_, i) => i).filter(i => act[i] === 0);
+      let p = K.map(() => 0), nu;
+      if (F.length) {
+        const n = F.length, Am = [], bb = [];
+        F.forEach(i => { Am.push([...F.map(j => lam * S[i][j]), 1]); bb.push(-g[i]); });
+        Am.push([...F.map(() => 1), 0]); bb.push(0);
+        const sol = solveLin(Am, bb);
+        F.forEach((i, k) => { p[i] = sol[k]; });
+        nu = sol[n];
+      } else {
+        nu = -K.reduce((s2, _, i) => s2 + g[i], 0) / N;
+      }
+      const pmax = Math.max(...p.map(Math.abs));
+      if (pmax < 1e-11) {
+        // multipliers: at LB need g_i + nu >= 0, at UB need g_i + nu <= 0
+        let rel = -1, worst = -1e-12;
+        K.forEach((_, i) => {
+          if (act[i] === 0) return;
+          const m = act[i] === -1 ? g[i] + nu : -(g[i] + nu);
+          if (m < worst) { worst = m; rel = i; }
+        });
+        if (rel < 0) return w;
+        act[rel] = 0;
+        continue;
+      }
+      let alpha = 1, block = -1;
+      F.forEach(i => {
+        if (p[i] > 1e-15) { const a2 = (UB[i] - w[i]) / p[i]; if (a2 < alpha) { alpha = a2; block = i; } }
+        else if (p[i] < -1e-15) { const a2 = (LB[i] - w[i]) / p[i]; if (a2 < alpha) { alpha = a2; block = i; } }
+      });
+      alpha = Math.max(0, alpha);
+      w = w.map((x, i) => x + alpha * p[i]);
+      if (block >= 0) { act[block] = p[block] > 0 ? 1 : -1; w[block] = p[block] > 0 ? UB[block] : LB[block]; }
+    }
+    return w;
+  }
+  function targetVol(mu, S, target) {
+    let lo = Math.log(0.2), hi = Math.log(20000), w = null;
+    const wHi = solveQP(mu, S, Math.exp(lo));
+    if (Math.sqrt(quad(S, wHi)) <= target) return { w: wHi, bound: "max" };
+    const wLo = solveQP(mu, S, Math.exp(hi));
+    if (Math.sqrt(quad(S, wLo)) >= target) return { w: wLo, bound: "min" };
+    w = wHi;
+    for (let it = 0; it < 34; it++) {
+      const mid = (lo + hi) / 2;
+      w = solveQP(mu, S, Math.exp(mid), w);
+      if (Math.sqrt(quad(S, w)) > target) lo = mid; else hi = mid;
+    }
+    return { w, bound: null };
+  }
+  function frontier(mu, S) {
+    const pts = [];
+    let w = null;
+    for (let j = 0; j <= 40; j++) {
+      const lam = Math.exp(Math.log(0.2) + (Math.log(20000) - Math.log(0.2)) * j / 40);
+      w = solveQP(mu, S, lam, w);
+      pts.push(w);
+    }
+    return pts;
+  }
+
+  // ---------------------------------------------------------------- portfolio metrics
+  const H = M.history;
+  const T = H.returns[K[0]].length;
+  function histPath(w) {
+    let v = 1, peak = 1, mdd = 0, worst12 = 0;
+    const path = [];
+    for (let t = 0; t < T; t++) {
+      let r = 0; for (let i = 0; i < N; i++) r += w[i] * H.returns[K[i]][t];
+      v *= 1 + r; path.push(v);
+      peak = Math.max(peak, v); mdd = Math.min(mdd, v / peak - 1);
+      if (t >= 12) worst12 = Math.min(worst12, v / path[t - 12] - 1);
+    }
+    return { mdd, worst12, cagr: Math.pow(v, 12 / T) - 1 };
+  }
+  function metrics(w, S) {
+    const muA = arith(state.exp, S);
+    const vol = Math.sqrt(quad(S, w));
+    const ea = dot(muA, w);
+    const eg = ea - vol * vol / 2;
+    const rf = state.exp[idx.cash];
+    const es = -(ea - 2.0627 * vol); // expected shortfall 95 %, 1 year, normal
+    const Sw = mv(S, w);
+    const rc = w.map((x, i) => x * Sw[i] / (vol * vol));
+    return { vol, eg, ea, sharpe: (eg - rf) / vol, es, rc, ...histPath(w) };
+  }
+  function stressHist(w, win) {
+    const start = H.start.split("-").map(Number);
+    const off = (ym) => { const [y, m] = ym.split("-").map(Number); return (y - start[0]) * 12 + (m - start[1]); };
+    let v = 1;
+    for (let t = off(win.from); t <= off(win.to); t++) { let r = 0; for (let i = 0; i < N; i++) r += w[i] * H.returns[K[i]][t]; v *= 1 + r; }
+    return v - 1;
+  }
+  const rateShock = -M.meta.bund_mod_duration * 0.01;
+  const SCEN = [
+    { name: "Zinsanstieg um 100 Basispunkte", shocks: { bund: rateShock } },
+    { name: "Aktien Europa −25 %", shocks: { eq_eu: -0.25 } },
+    { name: "Stagflation: Zinsanstieg und Aktien −20 %", shocks: { bund: rateShock, eq_eu: -0.20 } },
+    { name: "Flucht in Sicherheit: Zinsen −75 Bp., Aktien −20 %", shocks: { bund: -0.75 * rateShock, eq_eu: -0.20 } },
+  ];
+  function scenario(w, S, shocks) {
+    const sIdx = Object.keys(shocks).map(k => idx[k]);
+    const sVal = Object.keys(shocks).map(k => shocks[k]);
+    const Sss = sIdx.map(i => sIdx.map(j => S[i][j]));
+    const x = solveLin(Sss, sVal);
+    const r = K.map((_, i) => sIdx.includes(i) ? sVal[sIdx.indexOf(i)] : sIdx.reduce((s, j, a) => s + S[i][j] * x[a], 0));
+    return { total: dot(w, r), r };
+  }
+
+  // ---------------------------------------------------------------- Monte Carlo
+  function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function simulate(w, S) {
+    const m = metrics(w, S);
+    const infl = M.meta.inflation.value, cost = 0.005;
+    // Uncertainty of the decade mean: the CMA bands (1 SD of a 10-year
+    // outcome) contain both parameter uncertainty and ordinary return noise.
+    // The noise part (sigma^2/10) is simulated year by year, so only the
+    // remainder is drawn once per path as a persistent drift shift.
+    const bandHalf = A.map(a => (a.band[1] - a.band[0]) / 2);
+    const u = Math.abs(dot(w, bandHalf));
+    const realMu = (1 + m.eg - cost) / (1 + infl) - 1;
+    const logMu = Math.log(1 + realMu), sig = m.vol;
+    const muSd = Math.sqrt(Math.max(u * u - sig * sig / 10, 0));
+    const P = 3000, Hh = state.h, rand = rng(20260923);
+    const gauss = () => { let u = 0, v = 0; while (u === 0) u = rand(); v = rand(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    const paths = Array.from({ length: Hh + 1 }, () => new Float64Array(P));
+    let preserved = 0, depleted = 0;
+    const wdAmt = state.wd * state.w0;
+    for (let p = 0; p < P; p++) {
+      let W = state.w0; paths[0][p] = W;
+      const drift = logMu + gauss() * muSd;
+      for (let t = 1; t <= Hh; t++) {
+        W = Math.max(0, W - wdAmt);
+        W *= Math.exp(drift + sig * gauss()); // drift = log of the geometric mean, already net of volatility drag
+        paths[t][p] = W;
+      }
+      if (W >= state.w0) preserved++;
+      if (W <= 0) depleted++;
+    }
+    const q = (arr, pp) => { const s = Array.from(arr).sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.floor(pp * s.length))]; };
+    const bands = paths.map(arr => [0.05, 0.25, 0.5, 0.75, 0.95].map(pp => q(arr, pp)));
+    return { bands, pPreserve: preserved / P, pDeplete: depleted / P, realMu, sig, muSd };
+  }
+
+  // ---------------------------------------------------------------- SVG helpers
+  const NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs = {}, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function txt(parent, x, y, s, attrs = {}) { const t = el("text", { x, y, ...attrs }, parent); t.textContent = s; return t; }
+  const lin = (d0, d1, r0, r1) => { const f = (x) => r0 + (x - d0) / (d1 - d0) * (r1 - r0); f.inv = (y) => d0 + (y - r0) / (r1 - r0) * (d1 - d0); return f; };
+  function ticks(a, b, n) {
+    const step0 = (b - a) / n, mag = Math.pow(10, Math.floor(Math.log10(step0)));
+    const step = [1, 2, 2.5, 5, 10].map(s => s * mag).find(s => s >= step0);
+    const out = []; for (let v = Math.ceil(a / step - 1e-9) * step; v <= b + 1e-9; v += step) out.push(+v.toFixed(10));
+    return out;
+  }
+  function frame(host, W, Hh, m) {
+    host.innerHTML = "";
+    const svg = el("svg", { viewBox: `0 0 ${W} ${Hh}`, role: "img" }, host);
+    return { svg, x0: m.l, x1: W - m.r, y0: Hh - m.b, y1: m.t };
+  }
+  const tip = document.getElementById("tip");
+  function hover(node, html) {
+    const show = (e) => { tip.innerHTML = html(); tip.classList.add("on"); move(e); };
+    const move = (e) => {
+      const pt = e.touches ? e.touches[0] : e;
+      const x = Math.min(window.innerWidth - tip.offsetWidth - 8, pt.clientX + 14);
+      tip.style.left = x + "px"; tip.style.top = (pt.clientY + 14) + "px";
+    };
+    node.addEventListener("mouseenter", show); node.addEventListener("mousemove", move);
+    node.addEventListener("mouseleave", () => tip.classList.remove("on"));
+    node.addEventListener("touchstart", show, { passive: true });
+    node.style.cursor = "default";
+  }
+  const width = (id) => Math.max(320, Math.min(1080, document.getElementById(id).clientWidth || 700));
+
+  // ---------------------------------------------------------------- figure 1: CMA
+  function drawCMA() {
+    const W = width("fig-cma"), rowH = 34, m = { l: Math.min(210, W * 0.38), r: 20, t: 8, b: 30 };
+    const Hh = m.t + m.b + rowH * N;
+    const f = frame(document.getElementById("fig-cma"), W, Hh, m);
+    const lo = -0.04, hi = 0.13;
+    const x = lin(lo, hi, f.x0, f.x1);
+    ticks(lo, hi, 6).forEach(t => {
+      el("line", { x1: x(t), x2: x(t), y1: f.y1, y2: f.y0, class: t === 0 ? "zero" : "grid" }, f.svg);
+      txt(f.svg, x(t), f.y0 + 18, pct(t, 0), { "text-anchor": "middle" });
+    });
+    A.forEach((a, i) => {
+      const y = m.t + rowH * i + rowH / 2, e = state.exp[i];
+      const shift = e - a.expected;
+      el("rect", { x: 0, y: y - rowH / 2, width: W, height: rowH, fill: "transparent" }, f.svg);
+      el("circle", { cx: 8, cy: y - 4, r: 4.5, fill: color(a.key) }, f.svg);
+      txt(f.svg, 18, y, a.name, { class: "lbl", "font-size": 12.5 });
+      el("line", { x1: x(a.band[0] + shift), x2: x(a.band[1] + shift), y1: y, y2: y, stroke: color(a.key), "stroke-width": 2, "stroke-linecap": "round", opacity: .45 }, f.svg);
+      el("circle", { cx: x(a.hist_geo), cy: y, r: 4.5, fill: "var(--bg)", stroke: "var(--ink2)", "stroke-width": 1.5 }, f.svg);
+      el("circle", { cx: x(e), cy: y, r: 5.5, fill: color(a.key), stroke: "var(--bg)", "stroke-width": 2 }, f.svg);
+      txt(f.svg, x(e), y - 10, pct(e), { "text-anchor": "middle", class: "lbl-strong", "font-size": 11 });
+      const hit = el("rect", { x: f.x0, y: y - rowH / 2, width: f.x1 - f.x0, height: rowH, fill: "transparent" }, f.svg);
+      hover(hit, () => `<b>${a.name}</b><br>Erwartet ${pct(e)} p. a. (Bandbreite ${pct(a.band[0] + shift)} bis ${pct(a.band[1] + shift)})<br>Realisiert 1990–2026 ${pct(a.hist_geo)} p. a.`);
+    });
+  }
+
+  function herleitung(a) {
+    const d = a.detail;
+    if (a.key === "cash") return `Pfad von €STR ${pct(d.current, 2)} zu neutral ${pct(d.neutral, 2)}`;
+    if (a.key === "bund") return `Startrendite 10 J. ${pct(d.yield, 2)}`;
+    if (a.key === "credit") return `Verfallrendite ${pct(d.ytm, 2)} − Verluste ${pct(d.loss, 2)}`;
+    if (a.key === "gold") return `Inflation ${pct(M.meta.inflation.value, 1)}, real ${spct(d.real, 1)}`;
+    return `CAPE ${num(d.cape, 1)}: Regression ${pct(d.m1_regression_real)} real. Bausteine ${pct(d.m2_building_blocks_real)} real = Dividende ${pct(d.dy)} ${d.net_buyback >= 0 ? "+" : "−"} Rückkäufe netto ${pct(Math.abs(d.net_buyback))} + Wachstum ${pct(d.g_real)} ${d.reprice >= 0 ? "+" : "−"} Bewertung ${pct(Math.abs(d.reprice))}`;
+  }
+  function drawTable() {
+    const tb = document.querySelector("#tbl-cma tbody");
+    tb.innerHTML = "";
+    A.forEach((a, i) => {
+      const e = state.exp[i], shift = e - a.expected;
+      const tr = document.createElement("tr");
+      const infl = M.meta.inflation.value;
+      tr.innerHTML = `<td><span class="sw" style="background:${color(a.key)}"></span>${a.name}</td>
+        <td>${state.edit ? `<input class="cma" id="cma-${a.key}" type="number" step="0.1" value="${(e * 100).toFixed(2)}" aria-label="Erwartete Rendite ${a.name}">` : pct(e, 2)}</td>
+        <td>${pct((1 + e) / (1 + infl) - 1, 2)}</td>
+        <td>${pct(a.band[0] + shift)} bis ${pct(a.band[1] + shift)}</td>
+        <td>${pct(Math.sqrt(SIG.all[i][i]))}</td>
+        <td>${pct(a.hist_geo)}</td>
+        <td class="derive">${herleitung(a)}</td>`;
+      tb.appendChild(tr);
+    });
+    if (state.edit) tb.querySelectorAll("input.cma").forEach((inp, i) => inp.addEventListener("change", () => {
+      const v = parseFloat(inp.value.replace(",", "."));
+      if (!isNaN(v)) { state.exp[i] = v / 100; renderAll(true); }
+    }));
+  }
+
+  // ---------------------------------------------------------------- figure 2: CAPE
+  function drawCape() {
+    const W = width("fig-cape"), Hh = Math.round(W * 0.72), m = { l: 44, r: 14, t: 16, b: 38 };
+    const f = frame(document.getElementById("fig-cape"), W, Hh, m);
+    const x = lin(5, 45, f.x0, f.x1), y = lin(-0.06, 0.18, f.y0, f.y1);
+    ticks(-0.06, 0.18, 6).forEach(t => { el("line", { x1: f.x0, x2: f.x1, y1: y(t), y2: y(t), class: t === 0 ? "zero" : "grid" }, f.svg); txt(f.svg, f.x0 - 6, y(t) + 4, pct(t, 0), { "text-anchor": "end" }); });
+    ticks(5, 45, 8).forEach(t => txt(f.svg, x(t), f.y0 + 16, num(t, 0), { "text-anchor": "middle" }));
+    txt(f.svg, (f.x0 + f.x1) / 2, Hh - 4, "CAPE zu Beginn der Dekade", { "text-anchor": "middle", class: "lbl" });
+    const g = el("g", {}, f.svg);
+    M.cape.points.forEach(([d, c, r]) => {
+      if (c < 5 || c > 45) return;
+      const p = el("circle", { cx: x(c), cy: y(r), r: 2.6, fill: "var(--c-bund)", "fill-opacity": .32 }, g);
+      hover(p, () => `<b>${monthName(d)}</b><br>CAPE ${num(c, 1)}<br>Reale Rendite der Folgedekade ${pct(r)} p. a.`);
+    });
+    let dpath = "";
+    for (let c = 6; c <= 45; c += 0.5) dpath += (dpath ? "L" : "M") + x(c).toFixed(1) + "," + y(M.cape.alpha + M.cape.beta / c).toFixed(1);
+    el("path", { d: dpath, fill: "none", stroke: "var(--ink)", "stroke-width": 2 }, f.svg);
+    const cur = [["eq_eu", "Europa"], ["eq_em", "Schwellenl."], ["eq_us", "USA"]];
+    cur.forEach(([k, lab], j) => {
+      const c = M.cape.current[k], pr = M.cape.alpha + M.cape.beta / c;
+      el("line", { x1: x(c), x2: x(c), y1: f.y1, y2: f.y0, stroke: color(k), "stroke-width": 1.5 }, f.svg);
+      el("circle", { cx: x(c), cy: y(pr), r: 5, fill: color(k), stroke: "var(--bg)", "stroke-width": 2 }, f.svg);
+      txt(f.svg, x(c) + 5, f.y1 + 12 + j * 14, `${lab} ${num(c, 1)}`, { class: "lbl-strong", "font-size": 11 });
+    });
+  }
+
+  // ---------------------------------------------------------------- figure 3: bonds
+  function drawBond() {
+    const W = width("fig-bond"), Hh = Math.round(W * 0.72), m = { l: 44, r: 14, t: 16, b: 38 };
+    const f = frame(document.getElementById("fig-bond"), W, Hh, m);
+    const x = lin(0, 0.11, f.x0, f.x1), y = lin(-0.03, 0.12, f.y0, f.y1);
+    ticks(-0.03, 0.12, 5).forEach(t => { el("line", { x1: f.x0, x2: f.x1, y1: y(t), y2: y(t), class: t === 0 ? "zero" : "grid" }, f.svg); txt(f.svg, f.x0 - 6, y(t) + 4, pct(t, 0), { "text-anchor": "end" }); });
+    ticks(0, 0.11, 6).forEach(t => txt(f.svg, x(t), f.y0 + 16, pct(t, 0), { "text-anchor": "middle" }));
+    txt(f.svg, (f.x0 + f.x1) / 2, Hh - 4, "Rendite 10 J. zu Beginn der Dekade", { "text-anchor": "middle", class: "lbl" });
+    el("line", { x1: x(0), y1: y(0), x2: x(0.11), y2: y(0.11), stroke: "var(--ink)", "stroke-width": 1.5, "stroke-dasharray": "0" , opacity: .9}, f.svg);
+    txt(f.svg, x(0.098), y(0.105) - 6, "45°-Linie", { class: "lbl", "text-anchor": "end" });
+    M.bonds.points.forEach(([d, s, r]) => {
+      const p = el("circle", { cx: x(s), cy: y(r), r: 2.6, fill: "var(--c-bund)", "fill-opacity": .45 }, f.svg);
+      hover(p, () => `<b>${monthName(d)}</b><br>Startrendite ${pct(s, 2)}<br>Rendite der Folgedekade ${pct(r, 2)} p. a.`);
+    });
+    const now = state.exp[idx.bund];
+    el("line", { x1: x(now), x2: x(now), y1: f.y1, y2: f.y0, stroke: "var(--c-bund)", "stroke-width": 1.5 }, f.svg);
+    el("circle", { cx: x(now), cy: y(now), r: 5, fill: "var(--c-bund)", stroke: "var(--bg)", "stroke-width": 2 }, f.svg);
+    txt(f.svg, x(now) + 6, f.y1 + 12, `Heute ${pct(now, 1)}`, { class: "lbl-strong" });
+  }
+
+  // ---------------------------------------------------------------- figure 4: rolling correlation
+  function drawCorr() {
+    const W = width("fig-corr"), Hh = Math.max(220, Math.round(W * 0.3)), m = { l: 40, r: 58, t: 14, b: 26 };
+    const f = frame(document.getElementById("fig-corr"), W, Hh, m);
+    const pts = M.stock_bond_corr;
+    const t0 = +pts[0][0].slice(0, 4) + (+pts[0][0].slice(5) - 1) / 12, t1 = +pts[pts.length - 1][0].slice(0, 4) + (+pts[pts.length - 1][0].slice(5) - 1) / 12;
+    const tx = (d) => +d.slice(0, 4) + (+d.slice(5) - 1) / 12;
+    const x = lin(t0, t1, f.x0, f.x1), y = lin(-0.8, 0.8, f.y0, f.y1);
+    [-0.8, -0.4, 0, 0.4, 0.8].forEach(t => { el("line", { x1: f.x0, x2: f.x1, y1: y(t), y2: y(t), class: t === 0 ? "zero" : "grid" }, f.svg); txt(f.svg, f.x0 - 6, y(t) + 4, num(t, 1), { "text-anchor": "end" }); });
+    for (let yr = 1995; yr <= 2025; yr += 5) txt(f.svg, x(yr), f.y0 + 17, yr, { "text-anchor": "middle" });
+    // shade positive stretches
+    let run = null;
+    pts.forEach(([d, v], i) => {
+      if (v > 0 && run === null) run = i;
+      if ((v <= 0 || i === pts.length - 1) && run !== null) {
+        const e = v <= 0 ? i : i;
+        el("rect", { x: x(tx(pts[run][0])), y: f.y1, width: Math.max(1, x(tx(pts[e][0])) - x(tx(pts[run][0]))), height: f.y0 - f.y1, fill: "var(--c-eq_eu)", "fill-opacity": .09 }, f.svg);
+        run = null;
+      }
+    });
+    let d = "";
+    pts.forEach(([t, v]) => { d += (d ? "L" : "M") + x(tx(t)).toFixed(1) + "," + y(v).toFixed(1); });
+    el("path", { d, fill: "none", stroke: "var(--ink)", "stroke-width": 2, "stroke-linejoin": "round" }, f.svg);
+    const last = pts[pts.length - 1];
+    el("circle", { cx: x(tx(last[0])), cy: y(last[1]), r: 4.5, fill: "var(--ink)", stroke: "var(--bg)", "stroke-width": 2 }, f.svg);
+    txt(f.svg, x(tx(last[0])) + 8, y(last[1]) + 4, num(last[1], 2), { class: "lbl-strong" });
+    txt(f.svg, f.x0 + 6, y(0.8) + 13, "Positive Korrelation: Inflationsregime", { class: "lbl" });
+    txt(f.svg, f.x0 + 6, y(-0.8) - 6, "Negative Korrelation: Anleihen sichern ab", { class: "lbl" });
+    // hover layer
+    const hit = el("rect", { x: f.x0, y: f.y1, width: f.x1 - f.x0, height: f.y0 - f.y1, fill: "transparent" }, f.svg);
+    const cross = el("line", { y1: f.y1, y2: f.y0, stroke: "var(--muted)", "stroke-width": 1, opacity: 0 }, f.svg);
+    let cur = null;
+    hit.addEventListener("mousemove", (e) => {
+      const r = f.svg.getBoundingClientRect(), sx = (e.clientX - r.left) * W / r.width;
+      const tt = x.inv(sx); cur = pts.reduce((b, p) => Math.abs(tx(p[0]) - tt) < Math.abs(tx(b[0]) - tt) ? p : b);
+      cross.setAttribute("x1", x(tx(cur[0]))); cross.setAttribute("x2", x(tx(cur[0]))); cross.setAttribute("opacity", 1);
+    });
+    hit.addEventListener("mouseleave", () => cross.setAttribute("opacity", 0));
+    hover(hit, () => cur ? `<b>${monthName(cur[0])}</b><br>Korrelation ${num(cur[1], 2)}` : "");
+    const nPos = M.cov.info.pos.n_months, nNeg = M.cov.info.neg.n_months;
+    document.getElementById("cap-corr").innerHTML = `Aktuell <b>${num(last[1], 2)}</b> (${monthName(last[0])}). Schattiert: Phasen mit positiver Korrelation, ${nPos} von ${nPos + nNeg} Monaten. Korrelation Aktien Europa zu Bundesanleihen im Inflationsregime <b>${num(corrOf("pos", "eq_eu", "bund"), 2)}</b>, im Wachstumsregime <b>${num(corrOf("neg", "eq_eu", "bund"), 2)}</b>.`;
+  }
+  function corrOf(r, a, b) { const S = SIG[r], i = idx[a], j = idx[b]; return S[i][j] / Math.sqrt(S[i][i] * S[j][j]); }
+
+  // ---------------------------------------------------------------- portfolio figures
+  function drawWeights(w, rc) {
+    const W = width("fig-weights"), rowH = 30, m = { l: Math.min(150, W * 0.36), r: 14, t: 24, b: 8 };
+    const Hh = m.t + m.b + rowH * N;
+    const f = frame(document.getElementById("fig-weights"), W, Hh, m);
+    const gap = 16, colW = (f.x1 - f.x0 - gap) / 2;
+    const xw = lin(0, 0.6, f.x0, f.x0 + colW), xr = lin(0, 0.6, f.x0 + colW + gap, f.x1);
+    txt(f.svg, f.x0, 12, "Gewicht", { class: "lbl-strong" });
+    txt(f.svg, f.x0 + colW + gap, 12, "Risikobeitrag", { class: "lbl-strong" });
+    A.forEach((a, i) => {
+      const y = m.t + rowH * i + rowH / 2;
+      el("circle", { cx: 8, cy: y - 4, r: 4.5, fill: color(a.key) }, f.svg);
+      txt(f.svg, 18, y, SHORT[a.key], { class: "lbl", "font-size": 12 });
+      const bw = Math.max(0, xw(w[i]) - xw(0));
+      el("rect", { x: xw(0), y: y - 8, width: Math.max(bw, 0.5), height: 12, fill: color(a.key), rx: 2 }, f.svg);
+      el("line", { x1: xw(wRef[i]), x2: xw(wRef[i]), y1: y - 11, y2: y + 7, stroke: "var(--ink)", "stroke-width": 1.5 }, f.svg);
+      const lx = Math.max(xw(0) + bw, xw(wRef[i])) + 6;
+      txt(f.svg, Math.min(lx, xw(0.6) - 2), y + 2, pct(w[i], 0), { class: "lbl-strong", "font-size": 11, "text-anchor": lx > xw(0.6) - 30 ? "end" : "start" });
+      const rb = Math.max(0, xr(Math.max(rc[i], 0)) - xr(0));
+      el("rect", { x: xr(0), y: y - 8, width: Math.max(rb, 0.5), height: 12, fill: color(a.key), rx: 2, opacity: .55 }, f.svg);
+      txt(f.svg, Math.min(xr(0) + rb + 5, f.x1 - 2), y + 2, pct(rc[i], 0), { class: "lbl", "font-size": 11, "text-anchor": xr(0) + rb + 5 > f.x1 - 30 ? "end" : "start" });
+      const hit = el("rect", { x: 0, y: y - rowH / 2, width: W, height: rowH, fill: "transparent" }, f.svg);
+      hover(hit, () => `<b>${a.name}</b><br>Gewicht ${pct(w[i])} (Referenz ${pct(wRef[i], 0)})<br>Anteil am Portfoliorisiko ${pct(rc[i])}<br>Obergrenze ${pct(UB[i], 0)}`);
+    });
+  }
+  function drawFrontier(front, S, w, wR) {
+    const W = width("fig-frontier"), Hh = Math.round(W * 0.78), m = { l: 44, r: 16, t: 14, b: 38 };
+    const f = frame(document.getElementById("fig-frontier"), W, Hh, m);
+    const muA = arith(state.exp, S);
+    const pt = (ww) => { const v = Math.sqrt(quad(S, ww)); return [v, dot(muA, ww) - v * v / 2]; };
+    const assetPts = K.map((k, i) => [Math.sqrt(S[i][i]), state.exp[i]]);
+    const fp = front.map(pt).sort((a, b) => a[0] - b[0]);
+    const ymax = Math.max(0.07, ...assetPts.map(p => p[1]), ...fp.map(p => p[1])) + 0.005;
+    const ymin = Math.min(0.0, ...assetPts.map(p => p[1])) - 0.002;
+    const x = lin(0, 0.22, f.x0, f.x1), y = lin(ymin, ymax, f.y0, f.y1);
+    ticks(ymin, ymax, 5).forEach(t => { el("line", { x1: f.x0, x2: f.x1, y1: y(t), y2: y(t), class: t === 0 ? "zero" : "grid" }, f.svg); txt(f.svg, f.x0 - 6, y(t) + 4, pct(t, 0), { "text-anchor": "end" }); });
+    ticks(0, 0.22, 6).forEach(t => txt(f.svg, x(t), f.y0 + 16, pct(t, 0), { "text-anchor": "middle" }));
+    txt(f.svg, (f.x0 + f.x1) / 2, Hh - 4, "Volatilität p. a.", { "text-anchor": "middle", class: "lbl" });
+    let d = ""; fp.forEach(p => d += (d ? "L" : "M") + x(p[0]).toFixed(1) + "," + y(p[1]).toFixed(1));
+    el("path", { d, fill: "none", stroke: "var(--ink)", "stroke-width": 2 }, f.svg);
+    assetPts.forEach((p, i) => {
+      el("circle", { cx: x(p[0]), cy: y(p[1]), r: 4.5, fill: color(K[i]), stroke: "var(--bg)", "stroke-width": 2 }, f.svg);
+      const short = { cash: "Geldmarkt", bund: "Bund", credit: "Credit", eq_eu: "Europa", eq_us: "USA", eq_em: "EM", gold: "Gold" }[K[i]];
+      txt(f.svg, x(p[0]) + 7, y(p[1]) + 4, short, { class: "lbl", "font-size": 10.5 });
+    });
+    const r = pt(wR);
+    el("rect", { x: x(r[0]) - 4.5, y: y(r[1]) - 4.5, width: 9, height: 9, fill: "var(--bg)", stroke: "var(--ink)", "stroke-width": 1.5 }, f.svg);
+    txt(f.svg, x(r[0]) + 8, y(r[1]) + 14, "Referenz", { class: "lbl" });
+    const p = pt(w);
+    el("circle", { cx: x(p[0]), cy: y(p[1]), r: 7, fill: "var(--accent)", stroke: "var(--bg)", "stroke-width": 2 }, f.svg);
+    txt(f.svg, x(p[0]) - 9, y(p[1]) - 9, "Portfolio", { class: "lbl-strong", "text-anchor": "end" });
+  }
+
+  // ---------------------------------------------------------------- fan chart
+  function drawFan(sim) {
+    const W = width("fig-fan"), Hh = Math.max(240, Math.round(W * 0.36)), m = { l: 64, r: 70, t: 12, b: 28 };
+    const f = frame(document.getElementById("fig-fan"), W, Hh, m);
+    const B = sim.bands, Hy = B.length - 1;
+    const ymax = Math.max(state.w0 * 1.2, ...B.map(b => b[4])) * 1.02;
+    const x = lin(0, Hy, f.x0, f.x1), y = lin(0, ymax, f.y0, f.y1);
+    ticks(0, ymax, 5).forEach(t => { el("line", { x1: f.x0, x2: f.x1, y1: y(t), y2: y(t), class: t === 0 ? "zero" : "grid" }, f.svg); txt(f.svg, f.x0 - 6, y(t) + 4, eur(t).replace(" Mio. €", " Mio."), { "text-anchor": "end" }); });
+    ticks(0, Hy, Math.min(Hy, 6)).forEach(t => txt(f.svg, x(t), f.y0 + 17, t === 0 ? "heute" : `${t} J.`, { "text-anchor": "middle" }));
+    const band = (a, b, op) => {
+      let d = ""; B.forEach((q, t) => d += (t ? "L" : "M") + x(t).toFixed(1) + "," + y(q[a]).toFixed(1));
+      for (let t = Hy; t >= 0; t--) d += "L" + x(t).toFixed(1) + "," + y(B[t][b]).toFixed(1);
+      el("path", { d: d + "Z", fill: "var(--accent)", "fill-opacity": op }, f.svg);
+    };
+    band(0, 4, 0.12); band(1, 3, 0.2);
+    el("line", { x1: f.x0, x2: f.x1, y1: y(state.w0), y2: y(state.w0), stroke: "var(--ink2)", "stroke-width": 1, "stroke-dasharray": "3 3" }, f.svg);
+    txt(f.svg, f.x0 + 4, y(state.w0) - 5, "Anfangsvermögen, real", { class: "lbl" });
+    let d = ""; B.forEach((q, t) => d += (t ? "L" : "M") + x(t).toFixed(1) + "," + y(q[2]).toFixed(1));
+    el("path", { d, fill: "none", stroke: "var(--accent)", "stroke-width": 2 }, f.svg);
+    const lastQ = B[Hy];
+    [[4, "95 %"], [2, "Median"], [0, "5 %"]].forEach(([k, lab]) => txt(f.svg, f.x1 + 6, y(lastQ[k]) + 4, lab, { class: k === 2 ? "lbl-strong" : "lbl" }));
+    const hit = el("rect", { x: f.x0, y: f.y1, width: f.x1 - f.x0, height: f.y0 - f.y1, fill: "transparent" }, f.svg);
+    const cross = el("line", { y1: f.y1, y2: f.y0, stroke: "var(--muted)", "stroke-width": 1, opacity: 0 }, f.svg);
+    let cur = 0;
+    hit.addEventListener("mousemove", (e) => { const r = f.svg.getBoundingClientRect(); cur = Math.round(x.inv((e.clientX - r.left) * W / r.width)); cur = Math.max(0, Math.min(Hy, cur)); cross.setAttribute("x1", x(cur)); cross.setAttribute("x2", x(cur)); cross.setAttribute("opacity", 1); });
+    hit.addEventListener("mouseleave", () => cross.setAttribute("opacity", 0));
+    hover(hit, () => `<b>Jahr ${cur}</b><br>95 %: ${eur(B[cur][4])}<br>75 %: ${eur(B[cur][3])}<br>Median: ${eur(B[cur][2])}<br>25 %: ${eur(B[cur][1])}<br>5 %: ${eur(B[cur][0])}`);
+  }
+
+  // ---------------------------------------------------------------- tables: stress
+  function drawStress(w, S) {
+    const th = document.querySelector("#tbl-hist thead"), tb = document.querySelector("#tbl-hist tbody");
+    th.innerHTML = `<tr><th>Episode</th><th>Zeitraum</th><th>Portfolio</th><th>Referenz</th>${K.map(k => `<th title="${name(k)}"><span class="sw" style="background:${color(k)}"></span>${({ cash: "Geldm.", bund: "Bund", credit: "Credit", eq_eu: "Europa", eq_us: "USA", eq_em: "EM", gold: "Gold" })[k]}</th>`).join("")}</tr>`;
+    tb.innerHTML = "";
+    M.stress.forEach(s => {
+      const p = stressHist(w, s), r = stressHist(wRef, s);
+      const cls = (v) => v < 0 ? "neg" : "";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${s.name}${s.credit_reconstructed ? '<sup class="muted">*</sup>' : ""}</td><td class="muted">${monthName(s.from)} bis ${monthName(s.to)}</td>
+        <td class="${cls(p)}"><b>${spct(p)}</b></td><td class="${cls(r)}">${spct(r)}</td>
+        ${K.map(k => `<td class="${cls(s.returns[k])}">${spct(s.returns[k], 0)}</td>`).join("")}`;
+      tb.appendChild(tr);
+    });
+    const th2 = document.querySelector("#tbl-hyp thead"), tb2 = document.querySelector("#tbl-hyp tbody");
+    th2.innerHTML = `<tr><th>Schock</th><th>Inflationsregime</th><th>Gesamt</th><th>Wachstumsregime</th><th>Referenz, Inflationsregime</th></tr>`;
+    tb2.innerHTML = "";
+    SCEN.forEach(sc => {
+      const v = ["pos", "all", "neg"].map(r => scenario(w, SIG[r], sc.shocks).total);
+      const ref = scenario(wRef, SIG.pos, sc.shocks).total;
+      const cls = (x) => x < 0 ? "neg" : "pos";
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${sc.name}</td>${v.map((x, j) => `<td class="${cls(x)}">${j === ["pos", "all", "neg"].indexOf(state.regime) ? "<b>" + spct(x) + "</b>" : spct(x)}</td>`).join("")}<td class="${cls(ref)}">${spct(ref)}</td>`;
+      tb2.appendChild(tr);
+    });
+    document.getElementById("stress-note").innerHTML = `* Unternehmensanleihen vor ${monthName(M.meta.credit_observed_from)} rekonstruiert aus Geldmarkt, Bundesanleihen und Aktien Europa (R² ${num(M.meta.credit_backfill.r2, 2)}). Die Rekonstruktion bildet Spread-Bewegungen nur teilweise ab und ist für diese Episoden nur grob. Ein Zinsschock von 100 Bp. entspricht bei einer modifizierten Duration von ${num(M.meta.bund_mod_duration, 1)} einem Kursverlust der Bundesanleihe von ${pct(-rateShock)}. Fettgedruckt ist das im Portfolio gewählte Regime.`;
+  }
+
+  // ---------------------------------------------------------------- method text
+  function method() {
+    const c = M.cape, b = M.bonds, g = M.gold;
+    const src = (a) => A[idx[a]].detail;
+    document.getElementById("method-body").innerHTML = `
+      <h3>Daten</h3>
+      <ul>
+        <li>Aktien: Marktrenditen des Kenneth R. French Data Library für USA (seit 1926), Europa (seit 1990) und Schwellenländer (seit 1989), in USD, umgerechnet mit EZB-Referenzkursen, vor 1999 D-Mark zum Kurs 1,95583.</li>
+        <li>Bundesanleihen: Monatsend-Rendite 10 J. der Bundesbank-Zinsstrukturkurve (Svensson) seit 1972. Die Rendite einer rollierenden 10-jährigen Parianleihe wird exakt aus Kupon und Kursänderung berechnet, nicht über eine Durationsnäherung.</li>
+        <li>Unternehmensanleihen: iShares Core € Corp Bond (Bloomberg Euro Corporate Index) seit ${monthName(M.meta.credit_observed_from)}. Für die Zeit davor und für die Kovarianzschätzung dient die Projektion nach Stambaugh (1997).</li>
+        <li>Geldmarkt: 3-Monats-Zins Deutschland bzw. Euribor (OECD via FRED). Gold: Monatsendkurs des COMEX-Futures (GC=F) ab ${monthName(M.meta.gold_eom_from)}, einzelne fehlende Monate aus Weltbank-Monatsdurchschnitten interpoliert. Davor nur Weltbank-Monatsdurchschnitte, die die Schwankung leicht glätten. Inflation: VPI Deutschland, ab 2025 HVPI.</li>
+        <li>Stichprobe für Risiko und Stresstests: ${monthName(M.meta.sample[0])} bis ${monthName(M.meta.sample[1])}, ${M.cov.info.all.n_months} Monate.</li>
+      </ul>
+      <p>Kontrolle gegen investierbare ETFs in EUR: Die konstruierten Reihen laufen eng mit den Fonds. Die Indexreihen liegen ohne Kosten und Quellensteuern und mit breiterem Aktienuniversum etwas über den Fondsrenditen.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Reihe</th><th>Vergleichs-ETF</th><th>Zeitraum</th><th>Korrelation</th><th>Rendite Modell p. a.</th><th>Rendite ETF p. a.</th></tr></thead>
+        <tbody>${M.validation.map(v => `<tr><td>${name(v.key)}</td><td style="white-space:normal">${v.etf}</td><td>${monthName(v.from)} bis ${monthName(v.to)}</td><td>${num(v.corr, 2)}</td><td>${pct(v.geo_model)}</td><td>${pct(v.geo_etf)}</td></tr>`).join("")}</tbody>
+      </table></div>
+      <p class="small sans ink2" style="margin-top:.6rem">Bundesanleihen: Der Vergleichsfonds enthält alle Laufzeiten und hat eine kürzere Duration als die 10-jährige Modellanleihe. Daher die niedrigere Korrelation.</p>
+      <h3>Renditeannahmen</h3>
+      <p>Die CAPE-Regression nutzt Shillers Monatsdaten für die USA von ${c.sample[0].slice(0, 4)} bis ${c.sample[1].slice(0, 4)} (Startzeitpunkte). Geschätzt wird die reale Rendite der Folgedekade auf 1/CAPE: Steigung ${num(c.beta, 2)} (HAC-Standardfehler ${num(c.se_beta, 2)}, Newey-West mit 120 Lags), R² ${num(c.r2, 2)}. Wegen überlappender Zehnjahresfenster enthält die Stichprobe nur etwa ${num(c.n_indep, 0)} unabhängige Beobachtungen. Ein Out-of-sample-Test ab ${c.oos_start.slice(0, 4)}, der nur zum jeweiligen Zeitpunkt bekannte Daten nutzt, ergibt ein R² von ${num(c.oos_r2, 2)} gegenüber dem historischen Mittel. Der Standardfehler einer einzelnen Dekade liegt bei ${pct(c.resid_sd)} p. a. Das ist die Bandbreite in Tabelle 3.</p>
+      <p>Die Bausteinrechnung folgt dem Grinold-Kroner-Schema: Dividendenrendite plus Nettorückkaufrendite (abzüglich Verwässerung durch Neuemissionen) plus reales Wachstum der Gesamtgewinne plus Bewertungsänderung. Für die Bewertung wird angenommen, dass sich die Hälfte der Lücke zwischen heutigem und langfristigem CAPE über zehn Jahre schließt.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Region</th><th>CAPE</th><th>Fairer CAPE</th><th>Dividende</th><th>Rückkäufe netto</th><th>Wachstum real</th><th>Bewertung p. a.</th><th>Bausteine real</th></tr></thead>
+        <tbody>${["eq_eu", "eq_us", "eq_em"].map(k => { const d = src(k); return `<tr><td>${name(k)}</td><td>${num(d.cape, 1)}</td><td>${num(d.cape_fair, 0)}</td><td>${pct(d.dy, 2)}</td><td>${spct(d.net_buyback, 1)}</td><td>${pct(d.g_real, 1)}</td><td>${spct(d.reprice, 1)}</td><td>${pct(d.m2_building_blocks_real, 1)}</td></tr>`; }).join("")}</tbody>
+      </table></div>
+      <p class="small sans ink2" style="margin-top:.6rem">Rückkäufe netto: in den USA etwa die Hälfte der Bruttorückkäufe von rund 1,8 % des Börsenwerts, in Europa ebenso. Schwellenländer verwässern durch Neuemissionen, daher negativ. Wachstum: reales Potenzialwachstum der Region. Fairer CAPE der USA: Median seit 1950 (20,9).</p>
+      <p>Der Schwellenländer-CAPE ist aus Länderwerten aggregiert und deckt 80 % des Index ab. Zusammen mit der Verwässerungsannahme ist er die unsicherste Eingabe des Modells.</p>
+      <p>Für Bundesanleihen erklärt die Startrendite ${num(b.r2 * 100, 0)} % der Streuung der Folgerenditen (${b.sample[0].slice(0, 4)} bis ${b.sample[1].slice(0, 4)}, Steigung ${num(b.slope, 2)}). Der mittlere absolute Fehler beträgt ${num(b.mae * 100, 1)} Prozentpunkte. Gold liegt real auf dem ${num(g.percentile * 100, 0)}. Perzentil seit 1975, beim ${num(g.ratio_to_median, 1)}-fachen des Medians. Das begründet die leicht negative reale Annahme.</p>
+      <h3>Risiko und Portfoliokonstruktion</h3>
+      <p>Kovarianzen stammen aus Monatsrenditen in EUR mit Ledoit-Wolf-Schrumpfung zur konstanten Korrelation. Die Regime entstehen aus dem Vorzeichen der rollierenden 36-Monats-Korrelation zwischen Aktien Europa und Bundesanleihen. Erwartete arithmetische Renditen ergeben sich aus den geometrischen Annahmen plus halber Varianz. Der Anker ist ein Referenzportfolio aus 53 % Aktien (22 % Europa, 23 % USA, 8 % Schwellenländer), 35 % Anleihen, 5 % Geldmarkt und 7 % Gold. Seine implizierten Gleichgewichtsrenditen werden mit den Kapitalmarktannahmen gemischt. Die Optimierung löst das quadratische Problem mit Obergrenzen je Klasse und ohne Leerverkäufe. Ausgewiesene erwartete Renditen stammen immer aus den Kapitalmarktannahmen, nicht aus der Mischung.</p>
+      <h3>Taktische Signale und Portfolio-Check</h3>
+      <p>Bewertung: Aktien über den Abstand zwischen heutigem und fairem CAPE (logarithmisch, ein Faktor 1,5 entspricht dem vollen Ausschlag). Bundesanleihen über die Realrendite im Vergleich zu den Realrenditen seit 1990. Unternehmensanleihen über den Aufschlag zur AAA-Kurve gegenüber einem Normalwert von 1,2 Prozentpunkten. Gold über das Perzentil des realen Preises seit 1975. Trend: Überrendite der letzten zwölf Monate gegenüber Geldmarkt, geteilt durch die Volatilität der letzten 36 Monate, begrenzt auf ±1,5 und auf ±1 skaliert. Die Gesamtwertung ist der Mittelwert beider Signale. Sie verschiebt das Referenzportfolio um bis zu ±5 Prozentpunkte bei Aktien und Bundesanleihen und ±3 Prozentpunkte bei Unternehmensanleihen, Schwellenländern und Gold.</p>
+      <p>Der Portfolio-Check zerlegt Fonds anhand gerundeter Länderanteile. Einzelaktien und enge Indizes erhalten ein titelspezifisches Zusatzrisiko (Einzelaktie 30 % p. a., Nasdaq-100 10 %, DAX 8 %, EURO STOXX 50 5 %), aber keine eigene Renditeerwartung. Das Modellportfolio hat dasselbe Marktrisiko wie das Depot, weicht je Anlageklasse höchstens 10 Prozentpunkte vom Referenzportfolio ab und enthält die taktischen Verschiebungen.</p>
+      <h3>Was das Modell nicht leistet</h3>
+      <ul>
+        <li>Es ist kein Timing-Instrument. Bewertungskennzahlen erklären Dekaden, kaum einzelne Jahre.</li>
+        <li>Die CAPE-Regression ist auf US-Daten geschätzt und auf andere Regionen übertragen. Strukturelle Unterschiede in Sektormix und Bilanzierung bleiben unberücksichtigt.</li>
+        <li>Die Regime sind am Ergebnis selbst abgegrenzt (Vorzeichen der Korrelation). Das beschreibt vergangene Phasen gut, sagt aber nicht voraus, wann ein Regimewechsel kommt.</li>
+        <li>Normalverteilte Renditen unterschätzen extreme Verluste. Die historischen Stresstests ergänzen die Kennzahlen deshalb.</li>
+        <li>Illiquide Anlagen, die in Family Offices großes Gewicht haben (Private Equity, direkte Immobilien), fehlen mangels verlässlicher öffentlicher Daten.</li>
+        <li>Steuern, Währungsabsicherung und Rebalancing-Kosten sind nicht modelliert. Die Projektion zieht pauschal 0,5 % Kosten p. a. ab.</li>
+      </ul>`;
+  }
+
+  // ---------------------------------------------------------------- render
+  let lastPF = null;
+  function renderPortfolio() {
+    const S = SIG[state.regime];
+    const mu = blendedMu(S);
+    const sol = targetVol(mu, S, state.vol);
+    const w = sol.w, mt = metrics(w, S), mr = metrics(wRef, S);
+    lastPF = { w, mt, S };
+    document.getElementById("out-vol").textContent = pct(state.vol, 1);
+    document.getElementById("out-conf").textContent = nf(0).format(state.conf * 100) + " %";
+    const eqShare = w[idx.eq_eu] + w[idx.eq_us] + w[idx.eq_em];
+    document.getElementById("hint-vol").textContent = `Aktienquote ${pct(eqShare, 0)}. ` + (sol.bound === "max" ? "Obergrenzen erlauben kein höheres Risiko." : sol.bound === "min" ? "Niedrigeres Risiko ist mit den Grenzen nicht erreichbar." : "Referenzportfolio: " + pct(mr.vol, 1) + ".");
+    document.getElementById("hint-regime").textContent = `${REGIME_LABEL[state.regime]}: Korrelation Aktien zu Bunds ${num(corrOf(state.regime, "eq_eu", "bund"), 2)}. ${state.regime === "pos" ? "Entspricht der aktuellen Lage." : ""}`;
+    const stat = (v, k, sub) => `<div class="stat"><div class="v">${v}${sub ? `<small>${sub}</small>` : ""}</div><div class="k">${k}</div></div>`;
+    document.getElementById("pf-stats").innerHTML =
+      stat(pct(mt.eg), "Erwartete Rendite p. a., nominal", "Ref. " + pct(mr.eg)) +
+      stat(pct(mt.vol), "Volatilität p. a.", "Ref. " + pct(mr.vol)) +
+      stat(num(mt.sharpe, 2), "Sharpe-Ratio über Geldmarkt", "Ref. " + num(mr.sharpe, 2)) +
+      stat(spct(-mt.es), "Expected Shortfall 95 %, 1 Jahr", "Ref. " + spct(-mr.es)) +
+      stat(spct(mt.mdd), "Max. Drawdown 1990–2026, historisch", "Ref. " + spct(mr.mdd));
+    drawWeights(w, mt.rc);
+    drawFrontier(frontier(mu, S), S, w, wRef);
+    const top = K.map((k, i) => [k, w[i] - wRef[i]]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 2);
+    document.getElementById("pf-note").innerHTML = `Größte Abweichungen zum Referenzportfolio: ${top.map(([k, d]) => `${name(k)} ${spct(d, 0)}`).join(", ")}. Erwartete reale Rendite nach Inflation ${pct((1 + mt.eg) / (1 + M.meta.inflation.value) - 1)} p. a. Die historische Rendite dieser Gewichte 1990–2026 wäre ${pct(mt.cagr)} p. a. gewesen, mit dem schlechtesten 12-Monats-Ergebnis von ${spct(mt.worst12)}.`;
+    renderKeyfigs(mt);
+    renderMC();
+    drawStress(w, S);
+  }
+  function renderMC() {
+    if (!lastPF) return;
+    document.getElementById("out-wd").textContent = pct(state.wd, 2).replace(",00", "");
+    document.getElementById("out-h").textContent = state.h + " Jahre";
+    const sim = simulate(lastPF.w, lastPF.S);
+    const endB = sim.bands[state.h];
+    const stat = (v, k) => `<div class="stat"><div class="v">${v}</div><div class="k">${k}</div></div>`;
+    document.getElementById("mc-stats").innerHTML =
+      stat(pct(sim.pPreserve, 0), `Wahrscheinlichkeit, nach ${state.h} Jahren real mindestens das Anfangsvermögen zu halten`) +
+      stat(eur(endB[2]), "Median Endvermögen, real") +
+      stat(eur(endB[0]), "Ungünstiges Szenario (5 %-Quantil), real") +
+      stat(eur(state.wd * state.w0), "Entnahme p. a., in heutiger Kaufkraft") +
+      stat(pct(sim.realMu), "Erwartete reale Rendite nach Kosten");
+    drawFan(sim);
+  }
+  function renderKeyfigs(mt) {
+    const eu = A[idx.eq_eu], us = A[idx.eq_us];
+    const corr = M.stock_bond_corr[M.stock_bond_corr.length - 1][1];
+    const kf = (v, k) => `<div class="keyfig"><div class="v">${v}</div><div class="k">${k}</div></div>`;
+    document.getElementById("keyfigs").innerHTML =
+      kf(pct(state.exp[idx.bund]), "Erwartete Rendite Bundesanleihen 10 J., p. a.") +
+      kf(pct(state.exp[idx.eq_us]) + " / " + pct(state.exp[idx.eq_eu]), "Aktien USA und Europa, erwartet p. a. in EUR") +
+      kf((corr > 0 ? "+" : "−") + num(Math.abs(corr), 2), "Korrelation Aktien zu Bunds, 36 Monate") +
+      kf(pct(mt.eg), `Portfolio mit ${pct(state.vol, 0)} Volatilität, erwartet p. a.`);
+  }
+  function renderAll(fromEdit) {
+    drawCMA(); if (!fromEdit) drawTable();
+    drawCape(); drawBond(); drawCorr();
+    renderPortfolio();
+    document.getElementById("cap-cape").innerHTML = `Jeder Punkt ist ein Startquartal ${M.cape.sample[0].slice(0, 4)} bis ${M.cape.sample[1].slice(0, 4)}. Linie: Regression auf 1/CAPE, R² <b>${num(M.cape.r2, 2)}</b>, out of sample <b>${num(M.cape.oos_r2, 2)}</b>. Senkrechte Linien: heutige Bewertung je Region, Punkt: implizierte reale Rendite.`;
+    document.getElementById("cap-bond").innerHTML = `Rollierende Parianleihe mit 10 Jahren Laufzeit, Startmonate ${M.bonds.sample[0].slice(0, 4)} bis ${M.bonds.sample[1].slice(0, 4)}. Die Punkte liegen eng an der 45°-Linie: R² <b>${num(M.bonds.r2, 2)}</b>, mittlerer Fehler ${num(M.bonds.mae * 100, 1)} Prozentpunkte.`;
+  }
+
+  // ---------------------------------------------------------------- wiring
+  document.getElementById("asof").textContent = "Stand " + new Date(M.meta.as_of).toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" });
+  document.getElementById("foot-build").textContent = `Daten bis ${monthName(M.meta.sample[1])}, Marktstand ${new Date(M.meta.as_of).toLocaleDateString("de-DE")}`;
+  const on = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);
+  on("in-vol", "input", (e) => { state.vol = +e.target.value / 100; renderPortfolio(); });
+  on("in-conf", "input", (e) => { state.conf = +e.target.value / 100; renderPortfolio(); });
+  document.querySelectorAll("#seg-regime button").forEach(b => b.addEventListener("click", () => {
+    state.regime = b.dataset.v;
+    document.querySelectorAll("#seg-regime button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+    renderPortfolio();
+  }));
+  on("in-wd", "input", (e) => { state.wd = +e.target.value / 100; renderMC(); });
+  on("in-h", "input", (e) => { state.h = +e.target.value; renderMC(); });
+  on("in-w0", "change", (e) => {
+    const v = parseFloat(e.target.value.replace(/\./g, "").replace(",", "."));
+    if (v > 0) { state.w0 = v; e.target.value = nf(0).format(v); renderMC(); } else e.target.value = nf(0).format(state.w0);
+  });
+  on("btn-edit", "click", () => {
+    state.edit = !state.edit;
+    document.getElementById("btn-edit").setAttribute("aria-pressed", String(state.edit));
+    document.getElementById("btn-edit").textContent = state.edit ? "Bearbeitung beenden" : "Eigene Annahmen eintragen";
+    document.getElementById("edit-hint").hidden = !state.edit;
+    document.getElementById("btn-reset").hidden = false;
+    drawTable();
+  });
+  on("btn-reset", "click", () => { state.exp = baseExp.slice(); drawTable(); renderAll(true); });
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => renderAll(true), 150); });
+  // portfolio check and tactical signals (web/check.js is inserted here)
+  // ================================================================ tactical signals
+  const SGN = M.signals, CL = SGN.classes;
+  const TILT = SGN.tilt;
+  const BAND = 0.10;
+  function grade(s) {
+    if (s > 0.5) return { t: "deutlich übergewichten", c: "up" };
+    if (s > 0.2) return { t: "übergewichten", c: "up" };
+    if (s < -0.5) return { t: "deutlich untergewichten", c: "dn" };
+    if (s < -0.2) return { t: "untergewichten", c: "dn" };
+    return { t: "neutral", c: "nt" };
+  }
+  const pill = (s) => { const g = grade(s); return `<span class="pill ${g.c}">${g.t}</span>`; };
+  const bar = (v) => {
+    const w = Math.abs(v) * 50, left = v >= 0 ? 50 : 50 - w;
+    return `<span class="bar" title="${num(v, 2)}"><i style="left:${left}%;width:${w}%;background:${v >= 0 ? "var(--pos)" : "var(--neg)"}"></i></span>`;
+  };
+  // add tactical tilts to a weight vector; cash absorbs the difference
+  function applyTilt(w) {
+    const out = w.map((x, i) => K[i] === "cash" ? x : Math.max(0, x + TILT[K[i]] * CL[K[i]].score));
+    const risky = out.reduce((s, x, i) => s + (K[i] === "cash" ? 0 : x), 0);
+    if (risky > 1) { const f = 1 / risky; out.forEach((x, i) => { out[i] = K[i] === "cash" ? 0 : x * f; }); }
+    else out[idx.cash] = 1 - risky;
+    return out;
+  }
+
+  // plus / minus points per asset class, formulated from the data
+  function classPoints(k) {
+    const c = CL[k], d = c.detail, a = A[idx[k]], cashE = state.exp[idx.cash];
+    const P = [], Mi = [], I = [];
+    const tr = c.ex12;
+    if (k !== "cash") {
+      if (c.trend > 0.2) P.push(`Trend positiv: ${spct(tr)} über Geldmarkt in den letzten zwölf Monaten.`);
+      else if (c.trend < -0.2) Mi.push(`Trend negativ: ${spct(tr)} gegenüber Geldmarkt in den letzten zwölf Monaten.`);
+      else I.push(`Trend ohne klare Richtung (${spct(tr)} über Geldmarkt in zwölf Monaten).`);
+    }
+    const prem = state.exp[idx[k]] - cashE;
+    if (k === "eq_us" || k === "eq_eu" || k === "eq_em") {
+      const txt = `CAPE ${num(d.cape, 1)} gegenüber einem fairen Wert von ${num(d.fair, 0)}.`;
+      if (c.val < -0.5) Mi.push(`Bewertung hoch: ${txt}`); else if (c.val < -0.2) Mi.push(`Bewertung erhöht: ${txt}`); else P.push(`Bewertung angemessen: ${txt}`);
+      (prem < 0.025 ? Mi : P).push(`Erwartete Rendite ${pct(state.exp[idx[k]])} p. a. über zehn Jahre, ${num(prem * 100, 1)} Prozentpunkte über Geldmarkt.`);
+      const ad = A[idx[k]].detail;
+      if (k === "eq_us") { Mi.push("Dollarrisiko: Kursgewinne können durch einen stärkeren Euro aufgezehrt werden."); P.push(`Aktienrückkäufe stützen die Ausschüttung (netto etwa ${pct(ad.net_buyback)} p. a.).`); }
+      if (k === "eq_eu") { P.push(`Dividendenrendite ${pct(ad.dy)}, deutlich über den USA. Kein Währungsrisiko.`); if (state.exp[idx.eq_eu] > state.exp[idx.eq_us]) P.push(`Günstiger als die USA: erwartete Rendite ${pct(state.exp[idx.eq_eu])} gegenüber ${pct(state.exp[idx.eq_us])}.`); }
+      if (k === "eq_em") { Mi.push("Taiwan und Südkorea machen fast die Hälfte des Index aus. Ihre hohe Bewertung treibt den Durchschnitt."); Mi.push(`Verwässerung durch Kapitalerhöhungen kostet etwa ${pct(Math.abs(ad.net_buyback))} p. a.`); P.push(`Höchstes reales Wirtschaftswachstum (etwa ${pct(ad.g_real)}).`); }
+    }
+    if (k === "bund") {
+      P.push(`Startrendite ${pct(state.exp[idx.bund])} ist die beste Schätzung der Rendite über zehn Jahre. Kein Ausfallrisiko.`);
+      (c.val >= 0 ? P : Mi).push(`Realrendite ${pct(d.real_yield)} nach 2 % Inflation, Median seit 1990 ${pct(d.median)}.`);
+      if (SGN.corr_now > 0) Mi.push(`Absicherung eingeschränkt: Aktien und Bunds laufen derzeit gleichgerichtet (Korrelation ${num(SGN.corr_now, 2)}). Bei Inflationsschocks verlieren beide.`);
+      else P.push(`Gute Absicherung: Korrelation zu Aktien ${num(SGN.corr_now, 2)}.`);
+      I.push(`Zinsanstieg um einen Prozentpunkt kostet etwa ${pct(-rateShock, 1)} Kurs.`);
+    }
+    if (k === "credit") {
+      P.push(`Höchste laufende Rendite unter den Anleihen: ${pct(a.detail.ytm)} auf Verfall, Laufzeitrisiko moderat (Duration ${num(a.detail.duration, 1)}).`);
+      (d.spread >= d.normal ? P : Mi).push(`Risikoaufschlag ${num(d.spread * 100, 1)} Prozentpunkte über AAA-Staatsanleihen, üblich sind rund ${num(d.normal * 100, 1)}. ${d.spread < d.normal ? "Wenig Puffer für eine Konjunkturschwäche." : ""}`);
+      Mi.push("Fällt in Krisen mit Aktien, etwa −7 % im Corona-Schock und −15 % in der Zinswende 2022.");
+    }
+    if (k === "gold") {
+      Mi.push(`Real auf dem ${num(d.pct * 100, 0)}. Perzentil seit 1975. Auf solchen Niveaus waren die Folgerenditen meist schwach.`);
+      Mi.push("Kein laufender Ertrag. Erwartete Rendite real leicht negativ.");
+      P.push("Krisenschutz: +35 % in der Finanzkrise, +15 % in der Euro-Schuldenkrise, positiv in der Zinswende 2022.");
+    }
+    if (k === "cash") {
+      P.push(`Kein Kursrisiko, aktuell ${pct(cashE)} p. a.`);
+      Mi.push(`Real nur ${pct(A[idx.cash].real)} p. a. Über lange Zeiträume der schwächste Baustein.`);
+    }
+    return { P, Mi, I };
+  }
+
+  function drawSignals() {
+    const tb = document.querySelector("#tbl-sig tbody");
+    const tac = applyTilt(wRef);
+    document.getElementById("sig-cap").textContent = `Signale zum ${monthName(SGN.as_of)}. Skala von −1 (negativ) bis +1 (positiv). Taktische Quote = Referenz plus bis zu ±${nf(0).format(TILT.eq_us * 100)} Prozentpunkte.`;
+    tb.innerHTML = K.map((k, i) => {
+      const c = CL[k];
+      return `<tr><td><span class="sw" style="background:${color(k)}"></span>${name(k)}</td>
+        <td style="text-align:center">${k === "cash" ? "–" : bar(c.val)}</td>
+        <td style="text-align:center">${k === "cash" ? "–" : bar(c.trend)}</td>
+        <td style="text-align:center">${k === "cash" ? "–" : bar(c.score)}</td>
+        <td style="text-align:left">${k === "cash" ? '<span class="muted">Restgröße</span>' : pill(c.score)}</td>
+        <td>${pct(wRef[i], 0)}</td><td><b>${pct(tac[i], 0)}</b></td></tr>`;
+    }).join("");
+    const bt = SGN.backtest, T1 = bt.tactical, R1 = bt.reference;
+    document.getElementById("bt-cap").textContent = `${monthName(bt.start)} bis ${monthName(bt.end)}, nach Kosten`;
+    const row = (l, a, b, f) => `<tr><td>${l}</td><td><b>${f(a)}</b></td><td>${f(b)}</td></tr>`;
+    document.querySelector("#tbl-bt tbody").innerHTML =
+      row("Rendite p. a.", T1.cagr, R1.cagr, (x) => pct(x)) + row("Volatilität p. a.", T1.vol, R1.vol, (x) => pct(x)) +
+      row("Sharpe-Ratio", T1.sharpe, R1.sharpe, (x) => num(x, 2)) + row("Max. Drawdown", T1.mdd, R1.mdd, (x) => spct(x));
+    document.getElementById("bt-note").innerHTML = `Mehrrendite <b>${spct(bt.excess_pa)}</b> p. a. bei einem Tracking Error von ${pct(bt.te)}, Information Ratio ${num(bt.ir, 2)}, t-Wert ${num(bt.t_stat, 1)}. In ${nf(0).format(bt.hit_years * 100)} % der Jahre besser als die Referenz. Umschlag ${pct(bt.turnover_pa, 0)} p. a., Kosten ${nf(1).format(bt.cost * 1e4)} Basispunkte je Umschichtung. Getestet ist nur das Trendsignal mit Vormonatsdaten, weil die Bewertung nicht für alle Klassen eine Monatshistorie hat.`;
+    drawBacktest();
+  }
+  function drawBacktest() {
+    const P = SGN.backtest.path;
+    const W = width("fig-bt"), Hh = Math.round(W * 0.62), m = { l: 40, r: 70, t: 12, b: 26 };
+    const f = frame(document.getElementById("fig-bt"), W, Hh, m);
+    const tx = (d) => +d.slice(0, 4) + (+d.slice(5) - 1) / 12;
+    const x = lin(tx(P[0][0]), tx(P[P.length - 1][0]), f.x0, f.x1);
+    const ymax = Math.max(...P.map(p => Math.max(p[1], p[2]))) * 1.05;
+    const y = lin(0, ymax, f.y0, f.y1);
+    ticks(0, ymax, 5).forEach(t => { el("line", { x1: f.x0, x2: f.x1, y1: y(t), y2: y(t), class: t === 0 ? "zero" : "grid" }, f.svg); txt(f.svg, f.x0 - 6, y(t) + 4, num(t, 0), { "text-anchor": "end" }); });
+    for (let yr = 1995; yr <= 2025; yr += 10) txt(f.svg, x(yr), f.y0 + 17, yr, { "text-anchor": "middle" });
+    [[2, "var(--muted)", "Referenz"], [1, "var(--accent)", "Taktisch"]].forEach(([j, col, lab]) => {
+      let d = ""; P.forEach(p => d += (d ? "L" : "M") + x(tx(p[0])).toFixed(1) + "," + y(p[j]).toFixed(1));
+      el("path", { d, fill: "none", stroke: col, "stroke-width": 2 }, f.svg);
+      const last = P[P.length - 1];
+      el("circle", { cx: x(tx(last[0])), cy: y(last[j]), r: 4, fill: col, stroke: "var(--bg)", "stroke-width": 2 }, f.svg);
+      txt(f.svg, x(tx(last[0])) + 8, y(last[j]) + 4, `${lab} ${num(last[j], 1)}`, { class: j === 1 ? "lbl-strong" : "lbl" });
+    });
+  }
+
+  // ================================================================ portfolio check
+  const INSTR = [
+    { id: "world", label: "MSCI World (ETF)", map: { eq_us: 0.72, eq_eu: 0.28 }, note: "Zerlegt in rund 72 % USA und 28 % übrige Industrieländer. Japan, Kanada und Australien (zusammen etwa 11 %) rechnet das Modell mit Europa." },
+    { id: "acwi", label: "MSCI ACWI / FTSE All-World (ETF)", map: { eq_us: 0.64, eq_eu: 0.25, eq_em: 0.11 }, note: "Zerlegt in rund 64 % USA, 25 % übrige Industrieländer und 11 % Schwellenländer." },
+    { id: "sp500", label: "S&P 500 / MSCI USA (ETF)", map: { eq_us: 1 } },
+    { id: "ndx", label: "Nasdaq-100 (ETF)", map: { eq_us: 1 }, idio: 0.10, note: "Starke Konzentration auf wenige Technologiewerte. Das Modell rechnet mit einem Zusatzrisiko von 10 % p. a. über dem US-Gesamtmarkt." },
+    { id: "europe", label: "MSCI Europe / STOXX Europe 600 (ETF)", map: { eq_eu: 1 } },
+    { id: "es50", label: "EURO STOXX 50 (ETF)", map: { eq_eu: 1 }, idio: 0.05, note: "Nur 50 Werte der Eurozone. Zusatzrisiko von 5 % p. a. gegenüber dem breiten Europa-Index." },
+    { id: "dax", label: "DAX (ETF)", map: { eq_eu: 1 }, idio: 0.08, note: "Nur deutsche Werte. Zusatzrisiko von 8 % p. a. gegenüber dem breiten Europa-Index." },
+    { id: "em", label: "MSCI Emerging Markets (ETF)", map: { eq_em: 1 } },
+    { id: "bund", label: "Bundesanleihen (ETF oder direkt)", map: { bund: 1 } },
+    { id: "egov", label: "Euro-Staatsanleihen (ETF)", map: { bund: 1 }, note: "Enthält Länder mit Risikoaufschlag wie Italien und Frankreich. Das Modell rechnet vereinfachend mit Bundesanleihen." },
+    { id: "corp", label: "Euro-Unternehmensanleihen IG (ETF)", map: { credit: 1 } },
+    { id: "cash", label: "Tagesgeld / Geldmarkt", map: { cash: 1 } },
+    { id: "gold", label: "Gold (ETC oder physisch)", map: { gold: 1 } },
+    { id: "stock", label: "Einzelaktie", map: null, idio: 0.30 },
+  ];
+  const REGION = { us: ["eq_us", "USA"], eu: ["eq_eu", "Europa"], em: ["eq_em", "Schwellenländer"] };
+  const EXAMPLES = {
+    welt: [["world", 55], ["em", 10], ["bund", 20], ["gold", 5], ["cash", 10]],
+    usa: [["sp500", 40], ["ndx", 20], ["stock", 10, "Tesla", "us"], ["stock", 10, "Nvidia", "us"], ["gold", 5], ["cash", 15]],
+    defensiv: [["cash", 30], ["bund", 30], ["corp", 20], ["world", 20]],
+  };
+  let rows = [];
+  const byId = Object.fromEntries(INSTR.map(x => [x.id, x]));
+
+  function rowHTML(r, i) {
+    const opt = INSTR.map(x => `<option value="${x.id}"${x.id === r.id ? " selected" : ""}>${x.label}</option>`).join("");
+    const det = r.id === "stock"
+      ? `<input id="pc-name-${i}" type="text" placeholder="Name, z. B. Tesla" value="${(r.name || "").replace(/"/g, "&quot;")}" aria-label="Name der Aktie"><select id="pc-reg-${i}" aria-label="Region">${Object.entries(REGION).map(([v, [, l]]) => `<option value="${v}"${v === r.region ? " selected" : ""}>${l}</option>`).join("")}</select>`
+      : `<span class="small muted" style="align-self:center">${byId[r.id].map ? Object.entries(byId[r.id].map).map(([k, v]) => `${SHORT[k]} ${nf(0).format(v * 100)} %`).join(", ") : ""}</span>`;
+    return `<div class="pc-row"><select id="pc-id-${i}" aria-label="Position">${opt}</select><div class="det">${det}</div><input class="w" id="pc-w-${i}" type="text" inputmode="decimal" value="${nf(1).format(r.w).replace(",0", "")}" aria-label="Gewicht in Prozent"><button type="button" class="rm" data-i="${i}" aria-label="Position entfernen">×</button></div>`;
+  }
+  function renderRows() {
+    const host = document.getElementById("pc-rows");
+    host.innerHTML = rows.map(rowHTML).join("");
+    rows.forEach((r, i) => {
+      document.getElementById(`pc-id-${i}`).addEventListener("change", (e) => { r.id = e.target.value; if (r.id === "stock" && !r.region) r.region = "us"; renderRows(); runCheck(); });
+      document.getElementById(`pc-w-${i}`).addEventListener("change", (e) => { const v = parseFloat(e.target.value.replace(",", ".")); r.w = isNaN(v) ? 0 : Math.max(0, v); runCheck(); });
+      if (r.id === "stock") {
+        document.getElementById(`pc-name-${i}`).addEventListener("change", (e) => { r.name = e.target.value.trim(); runCheck(); });
+        document.getElementById(`pc-reg-${i}`).addEventListener("change", (e) => { r.region = e.target.value; runCheck(); });
+      }
+    });
+    host.querySelectorAll(".rm").forEach(b => b.addEventListener("click", () => { rows.splice(+b.dataset.i, 1); renderRows(); runCheck(); }));
+  }
+  function loadExample(key) {
+    rows = EXAMPLES[key].map(([id, w, nm, reg]) => ({ id, w, name: nm || "", region: reg || "us" }));
+    renderRows(); runCheck();
+  }
+  const posMap = (r) => r.id === "stock" ? { [REGION[r.region][0]]: 1 } : byId[r.id].map;
+  const posName = (r) => r.id === "stock" ? `${r.name || "Einzelaktie"} (${REGION[r.region][1]})` : byId[r.id].label.replace(" (ETF)", "");
+
+  function runCheck() {
+    const out = document.getElementById("pc-out");
+    const tot = rows.reduce((s, r) => s + r.w, 0);
+    document.getElementById("pc-sum").innerHTML = `Summe <b>${nf(1).format(tot)} %</b>${Math.abs(tot - 100) > 0.05 && tot > 0 ? " · wird auf 100 % skaliert" : ""}`;
+    if (tot <= 0) { out.innerHTML = '<p class="note">Bitte mindestens eine Position mit Gewicht eintragen.</p>'; return; }
+    const pos = rows.filter(r => r.w > 0).map(r => ({ ...r, share: r.w / tot }));
+    const wU = K.map(() => 0);
+    let idioVar = 0;
+    pos.forEach(p => {
+      Object.entries(posMap(p)).forEach(([k, v]) => { wU[idx[k]] += p.share * v; });
+      const iv = (p.id === "stock" ? byId.stock.idio : byId[p.id].idio) || 0;
+      idioVar += (p.share * iv) ** 2;
+    });
+    const S = SIG.pos;
+    const mU = metrics(wU, S);
+    const volU = Math.sqrt(mU.vol * mU.vol + idioVar);
+    const egU = mU.ea - volU * volU / 2;
+    // model portfolio at the same systematic risk, strategic plus tactical
+    // Active bets are limited to +/-10 percentage points around the reference
+    // portfolio for every risky class; cash and Bunds absorb the risk level.
+    const cf = state.conf; state.conf = 0.25;
+    const tv = Math.min(Math.max(mU.vol, 0.03), 0.15);
+    const lb0 = LB.slice(), ub0 = UB.slice();
+    K.forEach((k, i) => {
+      if (k === "cash" || k === "bund") { LB[i] = 0; UB[i] = 0.7; }
+      else { LB[i] = Math.max(0, wRef[i] - BAND); UB[i] = Math.min(ub0[i], wRef[i] + BAND); }
+    });
+    const wS = targetVol(blendedMu(S), S, tv).w;
+    lb0.forEach((v, i) => { LB[i] = v; UB[i] = ub0[i]; });
+    state.conf = cf;
+    const wT = applyTilt(wS);
+    const mT = metrics(wT, S);
+    const worst = (w) => M.stress.reduce((a, s) => { const v = stressHist(w, s); return v < a.v ? { v, n: s.name } : a; }, { v: 0, n: "" });
+    const wsU = worst(wU), wsT = worst(wT);
+    const rf = state.exp[idx.cash];
+
+    // key findings
+    const diffs = K.map((k, i) => ({ k, d: wU[i] - wT[i] })).filter(x => Math.abs(x.d) >= 0.03).sort((a, b) => Math.abs(b.d) - Math.abs(a.d));
+    const find = [];
+    const eqU = wU[idx.eq_us] + wU[idx.eq_eu] + wU[idx.eq_em];
+    find.push(`Das Depot entspricht einem Portfolio mit ${pct(eqU, 0)} Aktien und einer erwarteten Schwankung von ${pct(volU)} p. a.`);
+    if (diffs.length) find.push(`Größte Abweichungen zum Modellportfolio: ${diffs.slice(0, 3).map(x => `${name(x.k)} ${spct(x.d, 0)}`).join(", ")}.`);
+    else find.push("Das Depot liegt nah am Modellportfolio. Kein dringender Umschichtungsbedarf.");
+    if (egU < mT.eg - 0.002) find.push(`Bei gleichem Marktrisiko erwartet das Modellportfolio ${spct(mT.eg - egU)} mehr Rendite pro Jahr.`);
+    const usd = wU[idx.eq_us] + wU[idx.gold];
+    if (usd > 0.4) find.push(`${pct(usd, 0)} des Depots sind Dollar-Anlagen (US-Aktien und Gold), ungesichert. Ein um 10 % stärkerer Euro kostet rund ${pct(usd * 0.1, 1)}.`);
+    const bigStocks = pos.filter(p => p.id === "stock" && p.share > 0.05);
+    const warn = [];
+    bigStocks.forEach(p => warn.push(`${posName(p)} macht ${pct(p.share, 0)} des Depots aus. Für eine Einzelaktie empfiehlt das Modell höchstens 5 %. Ein Kurseinbruch um 50 % kostet das Depot ${pct(p.share * 0.5, 1)}.`));
+    const stockSum = pos.filter(p => p.id === "stock").reduce((s, p) => s + p.share, 0);
+    if (stockSum > 0.15) warn.push(`Einzelaktien zusammen ${pct(stockSum, 0)}. Ihr Eigenrisiko macht ${pct(idioVar / (volU * volU), 0)} des gesamten Depotrisikos aus und wird nicht durch höhere erwartete Rendite ausgeglichen.`);
+    if (SGN.corr_now > 0 && wU[idx.bund] + wU[idx.credit] > 0.3) find.push(`Anleihen machen ${pct(wU[idx.bund] + wU[idx.credit], 0)} aus. Im aktuellen Regime sichern sie Aktienrisiken nur eingeschränkt ab.`);
+
+    const stat = (v, k, sub) => `<div class="stat"><div class="v">${v}${sub ? `<small>${sub}</small>` : ""}</div><div class="k">${k}</div></div>`;
+    let html = `<div class="pc-verdict"><h3>Ergebnis</h3><ul class="prose" style="padding-left:1.1rem;margin:0">${find.map(f => `<li style="margin-bottom:.35rem">${f}</li>`).join("")}</ul>${warn.map(w => `<div class="warn">${w}</div>`).join("")}</div>`;
+    html += `<div class="stats">${stat(pct(egU), "Erwartete Rendite p. a., 10 Jahre", "Modell " + pct(mT.eg))}${stat(pct(volU), "Volatilität p. a.", "Modell " + pct(mT.vol))}${stat(num((egU - rf) / volU, 2), "Sharpe-Ratio", "Modell " + num((mT.eg - rf) / mT.vol, 2))}${stat(spct(mU.mdd), "Max. Drawdown 1990–2026", "Modell " + spct(mT.mdd))}${stat(spct(wsU.v), `Schlechteste Krise (${wsU.n})`, "Modell " + spct(wsT.v))}</div>`;
+
+    // rebalancing table
+    html += `<div class="tablewrap"><table><caption>Umschichtung auf Ebene der Anlageklassen <span class="muted">Modellportfolio mit gleichem Marktrisiko, strategisch plus taktisch, höchstens ±10 Prozentpunkte je Anlageklasse vom Referenzportfolio, Korrelationen des Inflationsregimes</span></caption>
+      <thead><tr><th>Anlageklasse</th><th>Ihr Depot</th><th>Modell</th><th>Differenz</th><th style="text-align:left">Vorschlag</th><th style="text-align:left">Signal</th></tr></thead><tbody>${K.map((k, i) => {
+        const d = wT[i] - wU[i];
+        const act = d > 0.03 ? "aufstocken" : d < -0.03 ? "reduzieren" : "halten";
+        if (wU[i] < 0.005 && wT[i] < 0.005) return "";
+        return `<tr><td><span class="sw" style="background:${color(k)}"></span>${name(k)}</td><td>${pct(wU[i], 0)}</td><td><b>${pct(wT[i], 0)}</b></td><td class="${d > 0.03 ? "pos" : d < -0.03 ? "neg" : ""}">${spct(d, 0)}</td><td style="text-align:left">${act}</td><td style="text-align:left">${k === "cash" ? '<span class="muted">Restgröße</span>' : pill(CL[k].score)}</td></tr>`;
+      }).join("")}</tbody></table></div>`;
+
+    // per position
+    html += `<div class="pos-list">${pos.map(p => {
+      const mp = posMap(p);
+      const sc = Object.entries(mp).reduce((s, [k, v]) => s + v * CL[k].score, 0);
+      const trendAct = Object.entries(mp).reduce((s, [k, v]) => s + v * (wT[idx[k]] - wU[idx[k]]) / Math.max(wU[idx[k]], 1e-9), 0);
+      const tend = trendAct > 0.15 ? "aufstocken" : trendAct < -0.15 ? "reduzieren" : "halten";
+      const cls = Object.entries(mp).filter(([, v]) => v >= 0.25).sort((a, b) => b[1] - a[1]);
+      const pts = { P: [], Mi: [], I: [] };
+      cls.forEach(([k]) => {
+        const c = classPoints(k), pre = cls.length > 1 ? `${SHORT[k]}: ` : "";
+        const take = cls.length > 1 ? 2 : 4;
+        c.P.slice(0, take).forEach(t => pts.P.push(pre + t)); c.Mi.slice(0, take).forEach(t => pts.Mi.push(pre + t)); c.I.slice(0, 1).forEach(t => pts.I.push(pre + t));
+      });
+      if (p.id === "stock") {
+        const risk = (p.share * byId.stock.idio) ** 2 / (volU * volU);
+        pts.I.unshift(`Einzeltitel: Bewertet wird die Region ${REGION[p.region][1]}. Unternehmensspezifische Faktoren wie Produkte, Wettbewerb oder Management sind nicht Teil des Modells.`);
+        pts.Mi.unshift(`Eigenrisiko: Bei einer angenommenen titelspezifischen Schwankung von 30 % p. a. stammt ${pct(risk, 0)} des Depotrisikos allein aus dieser Aktie.`);
+      }
+      if (byId[p.id].note) pts.I.push(byId[p.id].note);
+      return `<div class="pos-card"><div class="t"><b>${posName(p)}</b>${pill(sc)}</div><div class="sub">${pct(p.share, 1)} des Depots · Modell: ${tend}</div><ul>${pts.P.map(t => `<li class="p">${t}</li>`).join("")}${pts.Mi.map(t => `<li class="m">${t}</li>`).join("")}${pts.I.map(t => `<li class="i">${t}</li>`).join("")}</ul></div>`;
+    }).join("")}</div>`;
+
+    const missing = K.filter((k, i) => wU[i] < 0.005 && wT[i] >= 0.05);
+    if (missing.length) html += `<p class="note">Im Depot fehlen Bausteine, die das Modell mit mindestens 5 % gewichtet: ${missing.map(k => `${name(k)} (${pct(wT[idx[k]], 0)})`).join(", ")}.</p>`;
+    html += `<p class="note">Modellsignale auf Basis öffentlicher Marktdaten, Stand ${monthName(SGN.as_of)}. Keine Anlageberatung und keine Empfehlung zum Kauf oder Verkauf einzelner Wertpapiere.</p>`;
+    out.innerHTML = html;
+  }
+
+  document.getElementById("pc-add").addEventListener("click", () => { rows.push({ id: "world", w: 10, name: "", region: "us" }); renderRows(); runCheck(); });
+  document.querySelectorAll("[data-example]").forEach(b => b.addEventListener("click", () => loadExample(b.dataset.example)));
+  drawSignals();
+  loadExample("welt");
+  window.addEventListener("resize", () => { clearTimeout(window.__bt); window.__bt = setTimeout(drawBacktest, 150); });
+
+  method();
+  renderAll(false);
+})();
+
+</script>
+
+</body>
+</html>
