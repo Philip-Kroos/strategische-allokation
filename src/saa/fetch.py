@@ -43,7 +43,7 @@ ISHARES_IEAC = "https://www.ishares.com/uk/individual/en/products/251726/ishares
 def get(url: str, **kw) -> requests.Response:
     for attempt in range(3):
         try:
-            r = requests.get(url, headers=UA, timeout=60, **kw)
+            r = requests.get(url, headers=UA, timeout=(10, 90), **kw)
             r.raise_for_status()
             return r
         except requests.RequestException:
@@ -60,8 +60,16 @@ def save(name: str, content: bytes, must_contain: bytes | None = None, min_bytes
 
 
 def fred() -> None:
-    url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=" + ",".join(FRED_IDS)
-    save("fred_bundle.csv", get(url).content, b"observation_date")
+    """One request per series: the combined request times out on FRED."""
+    import pandas as pd
+    frames = []
+    for sid in FRED_IDS:
+        r = get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}")
+        frames.append(pd.read_csv(io.BytesIO(r.content), index_col=0, na_values="."))
+        time.sleep(1)
+    df = pd.concat(frames, axis=1).sort_index()
+    df.index.name = "observation_date"
+    save("fred_bundle.csv", df.to_csv().encode(), b"observation_date")
     save("fred_estr.csv", get("https://fred.stlouisfed.org/graph/fredgraph.csv?id=ECBESTRVOLWGTTRMDMNRT").content,
          b"observation_date")
 
@@ -89,27 +97,55 @@ def github_datasets() -> None:
     save("gold_monthly.csv", get("https://raw.githubusercontent.com/datasets/gold-prices/main/data/monthly.csv").content, b"Price")
 
 
+def _yahoo_chart(t: str) -> list:
+    url = f"https://query2.finance.yahoo.com/v8/finance/chart/{requests.utils.quote(t)}?range=max&interval=1mo"
+    res = get(url).json()["chart"]["result"][0]
+    q = res["indicators"]["quote"][0]
+    adj = (res["indicators"].get("adjclose") or [{}])[0].get("adjclose") or q["close"]
+    cur = res["meta"].get("currency", "")
+    return [[t, datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d"), a, c, cur]
+            for ts, a, c in zip(res["timestamp"], adj, q["close"]) if a is not None]
+
+
+def _yahoo_yf(t: str) -> list:
+    """Same rows through the yfinance package, which handles Yahoo's cookie
+    check. Bars are converted to UTC, as in the chart API."""
+    import yfinance as yf
+    tk = yf.Ticker(t)
+    h = tk.history(period="max", interval="1mo", auto_adjust=False, actions=False)
+    if h.empty:
+        raise ValueError("leer")
+    idx = h.index.tz_convert("UTC") if h.index.tz is not None else h.index
+    cur = (tk.history_metadata or {}).get("currency", "")
+    return [[t, d.strftime("%Y-%m-%d"), float(a), float(c), cur]
+            for d, a, c in zip(idx, h["Adj Close"], h["Close"]) if a == a]
+
+
 def yahoo() -> None:
-    """Monthly bars from the chart API, one row per bar, UTC date of the bar."""
-    rows = []
+    """Monthly bars, one row per bar, UTC date of the bar. Tickers that fail
+    keep their previous rows."""
+    old = {}
+    if (RAW / "yahoo_monthly.csv").exists():
+        with open(RAW / "yahoo_monthly.csv") as f:
+            for row in list(csv.reader(f))[1:]:
+                old.setdefault(row[0], []).append(row)
+    rows, fresh = [], 0
     for t in YAHOO:
-        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{requests.utils.quote(t)}?range=max&interval=1mo"
-        try:
-            res = get(url).json()["chart"]["result"][0]
-        except Exception as e:  # keep the other tickers
-            print(f"  yahoo {t}: {e}")
-            continue
-        q = res["indicators"]["quote"][0]
-        adj = (res["indicators"].get("adjclose") or [{}])[0].get("adjclose") or q["close"]
-        cur = res["meta"].get("currency", "")
-        for ts, a, c in zip(res["timestamp"], adj, q["close"]):
-            if a is None:
-                continue
-            d = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
-            rows.append([t, d, a, c, cur])
+        got = None
+        for fn in (_yahoo_yf, _yahoo_chart):
+            try:
+                got = fn(t)
+                break
+            except Exception as e:  # keep the other tickers
+                print(f"  yahoo {t} ({fn.__name__}): {str(e)[:100]}", flush=True)
+        if got:
+            rows += got
+            fresh += 1
+        else:
+            rows += old.get(t, [])
         time.sleep(1)
-    if len({r[0] for r in rows}) < len(YAHOO) - 3:
-        raise ValueError("yahoo: too many tickers missing")
+    if fresh < len(YAHOO) - 3:
+        raise ValueError(f"yahoo: nur {fresh} von {len(YAHOO)} Kursreihen aktualisiert")
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(["ticker", "date", "adjclose", "close", "currency"])
@@ -120,12 +156,12 @@ def yahoo() -> None:
 def ishares_credit() -> None:
     """Weighted average yield to maturity and effective duration of the euro
     IG corporate bond ETF, written to data/raw/credit_ytm.json."""
-    html = get(ISHARES_IEAC).text
+    html = get(ISHARES_IEAC + "?switchLocale=y&siteEntryPassthrough=true").text
     txt = re.sub(r"<[^>]+>", " ", html)
     txt = re.sub(r"\s+", " ", txt)
-    ytm = re.search(r"Weighted Avg(?:erage)? YTM(?: as of)? [0-9A-Za-z/]+ ([0-9]+\.[0-9]+)%", txt)
-    dur = re.search(r"Effective Duration(?: as of)? [0-9A-Za-z/]+ ([0-9]+\.[0-9]+)", txt)
-    if not ytm:
+    ytm = re.search(r"Weighted Av(?:g|erage)\.? (?:YTM|Yield to Maturity).{0,60}?(?<![\d/.])(\d{1,2}\.\d{1,3}) ?%", txt, re.I)
+    dur = re.search(r"Effective Duration.{0,60}?(?<![\d/.])(\d{1,2}\.\d{1,3})(?![\d/])", txt, re.I)
+    if not ytm or not 0.5 < float(ytm.group(1)) < 10:
         raise ValueError("ishares: yield to maturity not found")
     out = {"ytm": float(ytm.group(1)) / 100, "duration": float(dur.group(1)) if dur else None,
            "fetched": datetime.now(timezone.utc).strftime("%Y-%m-%d")}
@@ -137,15 +173,19 @@ SOURCES = [("FRED", fred), ("EZB", ecb), ("Bundesbank", bundesbank), ("French", 
 
 
 def main() -> int:
-    ok = 0
+    ok, status = 0, {}
     for name, fn in SOURCES:
+        t0 = time.time()
         try:
             fn()
             ok += 1
-            print(f"ok     {name}")
+            status[name] = "ok"
+            print(f"ok     {name} ({time.time() - t0:.0f} s)", flush=True)
         except Exception as e:
-            print(f"FEHLER {name}: {e}")
-    stamp = {"fetched": datetime.now(timezone.utc).strftime("%Y-%m-%d"), "sources_ok": ok, "sources": len(SOURCES)}
+            status[name] = f"Fehler: {str(e)[:120]}"
+            print(f"FEHLER {name} ({time.time() - t0:.0f} s): {e}", flush=True)
+    stamp = {"fetched": datetime.now(timezone.utc).strftime("%Y-%m-%d"), "sources_ok": ok,
+             "sources": len(SOURCES), "status": status}
     (RAW / "fetch_log.json").write_text(json.dumps(stamp))
     return 0 if ok else 1
 
