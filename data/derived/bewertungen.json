@@ -1,0 +1,56 @@
+{
+ "stand": "2026-09-24",
+ "regions": {
+  "eq_us": {
+   "cape_month": "2026-08",
+   "dy_month": "2026-08",
+   "cape_source": "siblis",
+   "dy_source": "msci",
+   "cape": 36.4,
+   "dy": 0.011,
+   "coverage": 1.0,
+   "top": null
+  },
+  "eq_eu": {
+   "cape_month": "2026-08",
+   "dy_month": "2026-08",
+   "cape_source": "siblis",
+   "dy_source": "msci",
+   "cape": 22.211,
+   "dy": 0.0279,
+   "coverage": 0.8951,
+   "top": [
+    [
+     "Großbritannien",
+     0.229
+    ],
+    [
+     "Frankreich",
+     0.142
+    ]
+   ]
+  },
+  "eq_em": {
+   "cape_month": "2026-08",
+   "dy_month": "2026-08",
+   "cape_source": "siblis",
+   "dy_source": "msci",
+   "cape": 26.671,
+   "dy": 0.0201,
+   "coverage": 0.9266000000000001,
+   "top": [
+    [
+     "Taiwan",
+     0.284
+    ],
+    [
+     "Südkorea",
+     0.214
+    ]
+   ]
+  }
+ },
+ "bund": 0.0345,
+ "estr": 0.0244,
+ "credit_ytm": 0.0414
+}
