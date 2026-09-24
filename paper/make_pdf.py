@@ -49,7 +49,11 @@ def main() -> int:
         subprocess.run([sys.executable, str(ROOT / "paper" / "build_paper.py")], check=True)
         page.goto((ROOT / "paper" / "paper.html").as_uri())
         page.wait_for_timeout(800)
-        raw = page.pdf(format="A4", prefer_css_page_size=True, print_background=True)
+        # two pages: shrink slightly if the text runs over
+        for scale in (1.0, 0.97, 0.94, 0.91, 0.88):
+            raw = page.pdf(format="A4", prefer_css_page_size=True, print_background=True, scale=scale)
+            if len(PdfReader(io.BytesIO(raw)).pages) <= 2:
+                break
         browser.close()
 
     as_of = json.loads((ROOT / "docs" / "data" / "model.json").read_text())["meta"]["as_of"]
