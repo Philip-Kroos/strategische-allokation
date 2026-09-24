@@ -157,6 +157,16 @@ def signal_block(inputs: dict, rets: pd.DataFrame, rc: pd.Series, shiller: pd.Da
     return out
 
 
+def regime_now(rc: pd.Series) -> dict:
+    """Current correlation regime and the month it began."""
+    rc = rc.dropna()
+    pos = bool(rc.iloc[-1] > 0)
+    i = len(rc) - 1
+    while i > 0 and bool(rc.iloc[i - 1] > 0) == pos:
+        i -= 1
+    return {"current": "pos" if pos else "neg", "since": rc.index[i].strftime("%Y-%m")}
+
+
 def as_of(inputs: dict) -> str:
     try:
         return json.loads((ROOT / "data" / "raw" / "fetch_log.json").read_text())["fetched"]
@@ -229,6 +239,7 @@ def main() -> None:
             "credit_backfill": bf,
             "gold_eom_from": R.monthly_returns(R.yahoo_monthly("GC=F")).index[0].strftime("%Y-%m"),
             "bund_mod_duration": r4(mod_dur, 2),
+            "regime": regime_now(rc),
         },
         "assets": [
             {

@@ -58,6 +58,8 @@ def equity_cma(inp: dict, fit: CapeFit, infl: float) -> dict:
             "cape_fair": inp["cape_fair"],
             "closure": inp["closure"],
             "reprice": reprice,
+            "coverage": inp.get("coverage"),
+            "top_countries": inp.get("top_countries"),
         },
     }
 

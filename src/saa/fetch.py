@@ -37,6 +37,15 @@ FRENCH = ["F-F_Research_Data_Factors_CSV.zip", "Europe_3_Factors_CSV.zip",
           "Emerging_5_Factors_CSV.zip", "Developed_ex_US_3_Factors_CSV.zip"]
 YAHOO = ["IEAC.L", "EUNH.DE", "EXSA.DE", "SXR8.DE", "EEM", "IEMM.AS", "GC=F",
          "^GSPC", "^STOXX", "IWDA.AS", "IBCI.AS"]
+SIBLIS = {"cape": "https://siblisresearch.com/data/cape-ratios-by-country/",
+          "dy": "https://siblisresearch.com/data/global-dividend-yields/"}
+ISHARES_GEO = {"eq_em": "https://www.ishares.com/us/products/239637/ishares-msci-emerging-markets-etf",
+               "eq_eu": "https://www.ishares.com/us/products/264617/ishares-core-msci-europe-etf"}
+MSCI = {"eq_us": "https://www.msci.com/documents/10199/255599/msci-usa-index-net.pdf",
+        "eq_eu": "https://www.msci.com/documents/10199/255599/msci-europe-index-net.pdf",
+        "eq_em": "https://www.msci.com/documents/10199/255599/msci-emerging-markets-index-gross.pdf"}
+MONTHS_EN = {m: i + 1 for i, m in enumerate(["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"])}
 ISHARES_IEAC = "https://www.ishares.com/uk/individual/en/products/251726/ishares-euro-corporate-bond-ucits-etf"
 
 
@@ -177,8 +186,121 @@ def ishares_credit() -> None:
     (RAW / "credit_ytm.json").write_text(json.dumps(out))
 
 
+def _period(label: str) -> str:
+    m = re.fullmatch(r"([A-Z][a-z]{2}) (\d{4})", label.strip())
+    if not m or m.group(1) not in MONTHS_EN:
+        raise ValueError(f"siblis: unbekanntes Datum {label!r}")
+    return f"{m.group(2)}-{MONTHS_EN[m.group(1)]:02d}"
+
+
+def parse_siblis(html: str, measure: str) -> list[list]:
+    """First table of a Siblis country page: market, current value, value a
+    year earlier. Returns rows [measure, market, YYYY-MM, value]."""
+    out, cur = [], None
+    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S):
+        cells = [re.sub(r"<[^>]+>|\s+", " ", c).strip() for c in re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", tr, re.S)]
+        cells = [re.sub(r"\s+", " ", c).strip() for c in cells]
+        if len(cells) == 4 and cells[0].lower() == "market":
+            cur = (_period(cells[1]), _period(cells[2]))
+            continue
+        if cur is None:
+            continue
+        if len(cells) != 4:
+            break
+        for per, raw in zip(cur, cells[1:3]):
+            try:
+                v = float(raw.replace("%", "").replace(",", ""))
+            except ValueError:
+                continue
+            out.append([measure, cells[0], per, v / 100 if measure == "dy" else v])
+    if len(out) < 20:
+        raise ValueError(f"siblis {measure}: nur {len(out)} Werte gelesen")
+    return out
+
+
+def siblis() -> None:
+    """Country CAPE (monthly) and dividend yields (quarterly) from the free
+    tables of Siblis Research. New readings are added to data/raw/siblis.csv,
+    so the file builds up its own history."""
+    import pandas as pd
+    rows = []
+    for measure, url in SIBLIS.items():
+        rows += parse_siblis(get(url).text, measure)
+    new = pd.DataFrame(rows, columns=["measure", "market", "period", "value"])
+    path = RAW / "siblis.csv"
+    if path.exists():
+        new = pd.concat([pd.read_csv(path), new])
+    new = new.drop_duplicates(["measure", "market", "period"], keep="last").sort_values(["measure", "period", "market"])
+    save("siblis.csv", new.to_csv(index=False).encode(), b"measure")
+
+
+def parse_ishares_geo(html: str) -> dict:
+    """Country breakdown of an iShares fund page (top ten countries)."""
+    d = html.replace("&quot;", '"')
+    j = d.find('"countryPercent"')
+    if j < 0:
+        raise ValueError("ishares: Länderaufteilung nicht gefunden")
+    seg = d[j:j + 8000]
+
+    def field(name):
+        m = re.search(r'"name":"' + name + r'"[\s\S]*?"value":(\[[^\]]*\]|\d+)', seg)
+        if not m:
+            raise ValueError(f"ishares: Feld {name} fehlt")
+        return json.loads(m.group(1))
+
+    names, weights, asof = field("type"), field("fund"), str(field("asOf"))
+    if len(names) != len(weights) or not 90 < sum(weights) < 110:
+        raise ValueError("ishares: Länderaufteilung unplausibel")
+    rename = {"Korea (South)": "South Korea"}
+    w = {rename.get(n, n): float(x) for n, x in zip(names, weights)
+         if n != "Other" and not n.startswith("Cash")}
+    return {"asof": f"{asof[:4]}-{asof[4:6]}-{asof[6:]}", "weights": w}
+
+
+def ishares_countries() -> None:
+    out = {k: parse_ishares_geo(get(u).text) for k, u in ISHARES_GEO.items()}
+    (RAW / "country_weights.json").write_text(json.dumps(out, ensure_ascii=False, indent=1))
+
+
+def parse_msci(text: str) -> dict:
+    """Dividend yield, P/E, forward P/E and P/B from an MSCI index factsheet."""
+    t = re.sub(r"\s+", " ", text)
+    d = re.search(r"FUNDAMENTALS \(([A-Z]{3}) (\d{1,2}),? (\d{4})\)", t, re.I)
+    i = t.find("Div Yld")
+    if not d or i < 0:
+        raise ValueError("msci: Kennzahlen nicht gefunden")
+    nums = re.findall(r"(?<![\d.])(\d{1,3}\.\d{1,2})(?![\d.])", t[i:i + 300])
+    if len(nums) < 4:
+        raise ValueError("msci: zu wenige Kennzahlen")
+    dy, pe, pef, pb = (float(x) for x in nums[:4])
+    if not (0.2 < dy < 10 and 3 < pe < 80):
+        raise ValueError(f"msci: Werte unplausibel ({dy}, {pe})")
+    month = MONTHS_EN[d.group(1).title()]
+    return {"date": f"{d.group(3)}-{month:02d}-{int(d.group(2)):02d}", "dy": round(dy / 100, 5),
+            "pe": pe, "pe_fwd": pef, "pb": pb}
+
+
+def msci() -> None:
+    """Index fundamentals from the monthly MSCI factsheets."""
+    from pypdf import PdfReader
+    out = {}
+    for k, url in MSCI.items():
+        try:
+            pdf = PdfReader(io.BytesIO(get(url).content))
+            out[k] = parse_msci(" ".join(p.extract_text() or "" for p in pdf.pages))
+            print(f"  msci {k}: {out[k]}", flush=True)
+        except Exception as e:
+            print(f"  msci {k}: {str(e)[:120]}", flush=True)
+    if not out:
+        raise ValueError("msci: kein Factsheet lesbar")
+    path = RAW / "msci_fundamentals.json"
+    old = json.loads(path.read_text()) if path.exists() else {}
+    (RAW / "msci_fundamentals.json").write_text(json.dumps({**old, **out}, indent=1))
+
+
 SOURCES = [("EZB", ecb), ("Bundesbank", bundesbank), ("French", french),
-           ("Shiller/Gold", github_datasets), ("Yahoo", yahoo), ("iShares", ishares_credit), ("FRED", fred)]
+           ("Shiller/Gold", github_datasets), ("Yahoo", yahoo), ("iShares", ishares_credit),
+           ("Siblis", siblis), ("Länderanteile", ishares_countries), ("MSCI", msci), ("FRED", fred)]
 
 
 def main() -> int:
