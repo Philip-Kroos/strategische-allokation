@@ -38,7 +38,22 @@
     "net_buyback": 0.006,
     "buyback_source": "Europäische Rückkäufe auf Rekordniveau (Barclays-Tracker, Bloomberg 27.02.2026), brutto grob 1,2 % des Börsenwerts. Netto etwa die Hälfte angesetzt.",
     "g_source": "Potenzialwachstum Euroraum rund 1 %.",
-    "fair_source": "Annahme unter dem US-Wert wegen Sektormix (mehr Banken, Energie, Grundstoffe)."
+    "fair_source": "Annahme unter dem US-Wert wegen Sektormix (mehr Banken, Energie, Grundstoffe).",
+    "country_weights": {
+      "United Kingdom": 22.9,
+      "France": 14.2,
+      "Switzerland": 13.8,
+      "Germany": 13.1,
+      "Netherlands": 8.5,
+      "Spain": 6.0,
+      "Sweden": 6.0,
+      "Italy": 5.2,
+      "Denmark": 2.7,
+      "Finland": 1.9,
+      "Belgium": 1.9,
+      "Norway": 1.5
+    },
+    "country_weights_source": "Ersatzwerte, falls die Länderanteile von iShares (IEUR) nicht geladen werden können. Stand 22.09.2026."
   },
   "eq_us": {
     "cape": 35.82,
@@ -96,6 +111,6 @@
       "eq_eu": "2026-07",
       "eq_em": "2026-08"
     },
-    "note": "Stichtage der manuell gepflegten Werte (CAPE, Dividendenrendite). Zwischen den Stichtagen schreibt das Modell sie mit der Kursentwicklung fort. Einmal im Quartal aktualisieren."
+    "note": "Ersatzwerte (Stichtage), falls Siblis Research oder die MSCI-Factsheets nicht erreichbar sind. Das Modell schreibt sie dann mit der Kursentwicklung fort."
   }
 }
