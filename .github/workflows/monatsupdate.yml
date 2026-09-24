@@ -2,7 +2,8 @@ name: Monatliches Datenupdate
 
 on:
   schedule:
-    - cron: "0 6 3 * *"     # am 3. jedes Monats, 06:00 UTC
+    # am 6. und 20. jedes Monats, 05:17 UTC (nicht zur vollen Stunde, dann verzögert GitHub geplante Läufe oft)
+    - cron: "17 5 6,20 * *"
   workflow_dispatch:
 
 permissions:
@@ -12,9 +13,9 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
