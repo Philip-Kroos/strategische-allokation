@@ -60,17 +60,27 @@ def live_inputs(base: dict) -> tuple[dict, dict]:
     infl = inp["inflation_eur"]["value"]
     notes = {}
 
+    prev = last_known()
+    checks = []
+
+    def plausible(name, value, lo, hi, fallback):
+        if value is None or not lo <= value <= hi:
+            checks.append(f"{name}: Wert {value} außerhalb von {lo} bis {hi}, letzter Wert {fallback} beibehalten")
+            return fallback
+        return value
+
     # Bund: latest daily 10y yield of the ECB AAA curve (German and other AAA
     # issuers, within a few basis points of the Bund), more current than the
     # Bundesbank month-end series used for the return history
     y = R.ecb_series("ecb_yc_aaa.csv", "SR_10Y")
-    inp["bund"]["yield"] = round(float(y.iloc[-1]) / 100, 4)
+    inp["bund"]["yield"] = round(plausible("Bundrendite", float(y.iloc[-1]) / 100, -0.01, 0.10,
+                                           prev.get("bund", inp["bund"]["yield"])), 4)
     notes["bund"] = {"date": y.index[-1].strftime("%Y-%m-%d"), "value": inp["bund"]["yield"]}
 
     # Money market: latest €STR, path to neutral rate (a quarter weight on today)
     try:
         e = R.ecb_series("ecb_estr.csv")
-        cur = float(e.iloc[-1]) / 100
+        cur = plausible("€STR", float(e.iloc[-1]) / 100, -0.01, 0.10, prev.get("estr", inp["cash"]["current"]))
         inp["cash"]["current"] = round(cur, 4)
         notes["cash"] = {"date": e.index[-1].strftime("%Y-%m-%d"), "value": cur}
     except FileNotFoundError:
@@ -80,58 +90,109 @@ def live_inputs(base: dict) -> tuple[dict, dict]:
     # Credit: scraped yield to maturity if present
     try:
         c = json.loads((R.RAW / "credit_ytm.json").read_text())
-        inp["credit"]["ytm"] = c["ytm"]
-        if c.get("duration"):
+        inp["credit"]["ytm"] = plausible("Rendite Unternehmensanleihen", c["ytm"], 0.0, 0.12,
+                                         prev.get("credit_ytm", inp["credit"]["ytm"]))
+        if c.get("duration") and 1 < c["duration"] < 10:
             inp["credit"]["duration"] = c["duration"]
         notes["credit"] = c
     except FileNotFoundError:
         pass
 
-    # Equities: latest published CAPE and dividend yield (Siblis Research,
-    # country values aggregated with the fund's country weights), rolled
-    # forward with the price index to today. Without a published value the
-    # dated anchors in config/inputs.json are rolled forward instead.
+    # Equities: latest published CAPE (Siblis Research, country values
+    # aggregated with index weights) and dividend yield (MSCI factsheet),
+    # rolled forward with the price index to today. Without a fresh value the
+    # last accepted one (data/derived/bewertungen.json) is rolled forward, and
+    # without that the dated fallback in config/inputs.json.
     anchors = inp["anchors"]
     used = {}
     for k in ("eq_us", "eq_eu", "eq_em"):
         g = inp[k]["g_real"] + infl + max(inp[k]["net_buyback"], 0)
-        sc = siblis_value(k, "cape", inp)
-        if sc and 5 < sc["value"] < 80:
-            base, month, src = sc["value"], sc["period"], "siblis"
-        else:
-            base = em_cape_anchor(inp[k]) if k == "eq_em" else inp[k]["cape"]
-            month, src, sc = anchors["cape_month"], "stichtag", None
-        cape, info = _roll(base, k, month, g)
-        inp[k]["cape_anchor"] = round(base, 2)
-        inp[k]["cape"] = round(cape, 2)
-        # dividends are sticky: a higher price lowers the dividend yield one for one
-        # dividend yield: MSCI factsheet (whole index, monthly), else Siblis
-        # (country values, quarterly), else the dated anchor
-        sd, fm = siblis_value(k, "dy", inp), msci_value(k)
-        if fm:
-            dy0, dmonth, dsrc = fm["dy"], fm["date"][:7], "msci"
-        elif sd and 0.002 < sd["value"] < 0.1:
-            dy0, dmonth, dsrc = sd["value"], sd["period"], "siblis"
-        else:
-            dy0, dmonth, dsrc = inp[k]["dy"], anchors["dy_month"][k], "stichtag"
-        price_ratio, _ = _roll(1.0, k, dmonth, 0.0)
-        inp[k]["dy"] = round(dy0 / price_ratio, 4)
-
+        last = prev.get("regions", {}).get(k)
         label = REGION[k]
-        cov = f", {round(sc['coverage'] * 100)} % des Index" if sc and k != "eq_us" else ""
-        where = "Siblis Research" if src == "siblis" else "Stichtagswert"
-        inp[k]["cape_source"] = (f"{label}, {month_de(month)} ({where}{cov}), "
-                                 f"mit dem Kursindex fortgeschrieben bis {month_de(info.get('to', month))}")
-        dname = {"msci": "MSCI-Factsheet", "siblis": "Siblis Research", "stichtag": "Stichtagswert"}[dsrc]
-        inp[k]["dy_source"] = f"{label}, {month_de(dmonth)} ({dname}), mit Kursen fortgeschrieben"
-        if sc and k != "eq_us":
-            inp[k]["coverage"] = round(sc["coverage"], 3)
-            inp[k]["top_countries"] = sc["top"]
-        used[k] = {"cape_month": month, "dy_month": dmonth, "cape_source": src, "dy_source": dsrc}
-        notes[k] = {"cape": inp[k]["cape"], "anchor": inp[k]["cape_anchor"], "anchor_month": month,
-                    "source": src, **info}
+
+        # ---- CAPE
+        sc = siblis_value(k, "cape", inp)
+        cand = None
+        if sc and 5 < sc["value"] < 80:
+            cand = {"value": sc["value"], "month": sc["period"], "source": "siblis",
+                    "coverage": sc.get("coverage"), "top": sc.get("top")}
+            if last and last.get("cape_source") == "siblis" and \
+                    not _consistent(k, last["cape"], last["cape_month"], cand["value"], cand["month"], g, 0.15):
+                checks.append(f"CAPE {label}: neuer Wert {cand['value']:.1f} ({cand['month']}) passt nicht zur Kursentwicklung "
+                              f"seit {last['cape_month']} ({last['cape']:.1f}), letzter Wert fortgeschrieben")
+                cand = None
+        if cand is None and last:
+            cand = {"value": last["cape"], "month": last["cape_month"], "source": last["cape_source"],
+                    "coverage": last.get("coverage"), "top": last.get("top")}
+        if cand is None:
+            base = em_cape_anchor(inp[k]) if k == "eq_em" else inp[k]["cape"]
+            cand = {"value": base, "month": anchors["cape_month"], "source": "stichtag", "coverage": None, "top": None}
+        cape, info = _roll(cand["value"], k, cand["month"], g)
+        inp[k]["cape_anchor"] = round(cand["value"], 2)
+        inp[k]["cape"] = round(cape, 2)
+
+        # ---- dividend yield (dividends are sticky: price moves the yield one for one)
+        fm, sd = msci_value(k), siblis_value(k, "dy", inp)
+        dcand = None
+        if fm:
+            dcand = {"value": fm["dy"], "month": fm["date"][:7], "source": "msci"}
+        elif sd and 0.002 < sd["value"] < 0.1:
+            dcand = {"value": sd["value"], "month": sd["period"], "source": "siblis"}
+        if dcand and last and last.get("dy_source") == dcand["source"] and \
+                not _consistent(k, last["dy"], last["dy_month"], dcand["value"], dcand["month"], 0.0, 0.25, inverse=True):
+            checks.append(f"Dividendenrendite {label}: neuer Wert {dcand['value']:.2%} ({dcand['month']}) passt nicht zur "
+                          f"Kursentwicklung seit {last['dy_month']}, letzter Wert fortgeschrieben")
+            dcand = None
+        if dcand is None and last:
+            dcand = {"value": last["dy"], "month": last["dy_month"], "source": last["dy_source"]}
+        if dcand is None:
+            dcand = {"value": inp[k]["dy"], "month": anchors["dy_month"][k], "source": "stichtag"}
+        price_ratio, _ = _roll(1.0, k, dcand["month"], 0.0)
+        inp[k]["dy"] = round(dcand["value"] / price_ratio, 4)
+
+        names = {"siblis": "Siblis Research", "msci": "MSCI-Factsheet", "stichtag": "Stichtagswert"}
+        cov = f", {round(cand['coverage'] * 100)} % des Index" if cand.get("coverage") and k != "eq_us" else ""
+        inp[k]["cape_source"] = (f"{label}, {month_de(cand['month'])} ({names[cand['source']]}{cov}), "
+                                 f"mit dem Kursindex fortgeschrieben bis {month_de(info.get('to', cand['month']))}")
+        inp[k]["dy_source"] = f"{label}, {month_de(dcand['month'])} ({names[dcand['source']]}), mit Kursen fortgeschrieben"
+        if cand.get("coverage") and k != "eq_us":
+            inp[k]["coverage"] = round(cand["coverage"], 3)
+            inp[k]["top_countries"] = cand["top"]
+        used[k] = {"cape_month": cand["month"], "dy_month": dcand["month"], "cape_source": cand["source"],
+                   "dy_source": dcand["source"], "cape": round(cand["value"], 3), "dy": round(dcand["value"], 5),
+                   "coverage": cand.get("coverage"), "top": cand.get("top")}
+        notes[k] = {"cape": inp[k]["cape"], "anchor": inp[k]["cape_anchor"], "anchor_month": cand["month"],
+                    "source": cand["source"], **info}
     inp["anchors"] = {**anchors, "regions": used}
+    notes["checks"] = checks
+    notes["derived"] = {"regions": used, "bund": inp["bund"]["yield"], "estr": inp["cash"]["current"],
+                        "credit_ytm": inp["credit"]["ytm"]}
     return inp, notes
+
+
+DERIVED = R.RAW.parent / "derived" / "bewertungen.json"
+
+
+def last_known() -> dict:
+    try:
+        return json.loads(DERIVED.read_text())
+    except (FileNotFoundError, ValueError):
+        return {}
+
+
+def _consistent(k, v0, m0, v1, m1, g, tol, inverse=False) -> bool:
+    """Does a new reading fit the price move since the last one? CAPE moves
+    with price (less the growth of the earnings average), a dividend yield
+    against it. Readings more than `tol` (log) away are rejected."""
+    try:
+        s, _ = _price_series(k, pd.Period(m0, "M"))
+        p0, p1 = s.loc[pd.Period(m0, "M")], s.loc[pd.Period(m1, "M")]
+    except KeyError:
+        return True
+    months = (pd.Period(m1, "M") - pd.Period(m0, "M")).n
+    ratio = (p1 / p0) / (1 + g) ** (months / 12)
+    expected = v0 / ratio if inverse else v0 * ratio
+    return abs(np.log(v1 / expected)) <= tol
 
 
 REGION = {"eq_us": "USA", "eq_eu": "Europa", "eq_em": "Schwellenländer"}

@@ -36,7 +36,7 @@ ECB = {
 FRENCH = ["F-F_Research_Data_Factors_CSV.zip", "Europe_3_Factors_CSV.zip",
           "Emerging_5_Factors_CSV.zip", "Developed_ex_US_3_Factors_CSV.zip"]
 YAHOO = ["IEAC.L", "EUNH.DE", "EXSA.DE", "SXR8.DE", "EEM", "IEMM.AS", "GC=F",
-         "^GSPC", "^STOXX", "IWDA.AS", "IBCI.AS"]
+         "^GSPC", "^STOXX", "^IRX", "^TNX", "IWDA.AS", "IBCI.AS"]
 SIBLIS = {"cape": "https://siblisresearch.com/data/cape-ratios-by-country/",
           "dy": "https://siblisresearch.com/data/global-dividend-yields/"}
 ISHARES_GEO = {"eq_em": "https://www.ishares.com/us/products/239637/ishares-msci-emerging-markets-etf",

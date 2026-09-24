@@ -98,6 +98,59 @@ def gold_context() -> dict:
     }
 
 
+def _usd_rate(ticker: str, fred_col: str) -> tuple[pd.Series, float, str]:
+    """Monthly US rate in percent: FRED history, extended with the Yahoo
+    index (^IRX, ^TNX) where FRED ends. Also returns the latest reading."""
+    hist = R.fred_bundle()[fred_col].dropna()
+    now, src = float(hist.iloc[-1]), "FRED " + hist.index[-1].strftime("%Y-%m")
+    try:
+        y = pd.read_csv(ROOT / "data" / "raw" / "yahoo_monthly.csv", parse_dates=["date"])
+        y = y[y["ticker"] == ticker]
+        if len(y):
+            now, src = float(y["close"].iloc[-1]), ticker
+            ext = R.yahoo_monthly(ticker)
+            hist = pd.concat([hist, ext[ext.index > hist.index[-1]]])
+    except (FileNotFoundError, KeyError):
+        pass
+    return hist, now, src
+
+
+def currency_block(rets: pd.DataFrame, inputs: dict, cma: dict) -> dict:
+    """Hedging the dollar exposure of the reference portfolio (US equities
+    and gold) at 0, 50 and 100 %. Hedged monthly return = dollar return
+    + (EUR money market - USD money market). Expected cost over ten years:
+    the difference of ten-year yields (US Treasuries minus Bunds)."""
+    fx = R.usd_per_eur()
+    fx_ret = (fx.shift(1) / fx - 1).reindex(rets.index)
+    ibill, bill_now, bill_src = _usd_rate("^IRX", "TB3MS")
+    i_usd = (ibill / 100 / 12).shift(1).reindex(rets.index).ffill()
+    carry = rets["cash"] - i_usd
+    _, t10_now, t10_src = _usd_rate("^TNX", "GS10")
+    carry_now = bill_now / 100 - inputs["cash"]["current"]
+    carry_10y = t10_now / 100 - inputs["bund"]["yield"]
+    usd = ["eq_us", "gold"]
+    ref = pd.Series(SG.REF)[ORDER]
+    usd_share = float(ref[usd].sum())
+    exp_unhedged = float(sum(ref[k] * cma[k]["expected"] for k in ORDER))
+    rows = []
+    for h in (0.0, 0.5, 1.0):
+        r = rets[ORDER].copy()
+        for k in usd:
+            hedged = (1 + rets[k]) / (1 + fx_ret) - 1 + carry
+            r[k] = (1 - h) * rets[k] + h * hedged
+        p = (r * ref).sum(axis=1)
+        v = (1 + p).cumprod()
+        ep = lambda a, b: float((1 + p.loc[a:b]).prod() - 1)
+        rows.append({"hedge": h, "expected": exp_unhedged - h * usd_share * carry_10y,
+                     "hist": float(v.iloc[-1] ** (12 / len(p)) - 1), "vol": float(p.std() * np.sqrt(12)),
+                     "mdd": float((v / v.cummax() - 1).min()),
+                     "episodes": {"Dotcom-Crash": ep("2000-04", "2003-03"), "Finanzkrise": ep("2007-11", "2009-02"),
+                                  "Zinswende": ep("2022-01", "2022-09")}})
+    return {"usd_share": usd_share, "carry_now": carry_now, "carry_10y": carry_10y,
+            "bill_now": bill_now / 100, "t10_now": t10_now / 100, "sources": [bill_src, t10_src],
+            "corr_usd_equity": float(fx_ret.corr(rets["eq_eu"])), "rows": rows}
+
+
 def validation(raw: pd.DataFrame) -> list:
     """Compare the constructed EUR series with investable ETFs over their
     common history. Early months of some Yahoo ETF histories contain data
@@ -143,7 +196,8 @@ def signal_block(inputs: dict, rets: pd.DataFrame, rc: pd.Series, shiller: pd.Da
     tr = tr_all.iloc[-1]
     out = {"as_of": rets.index[-1].strftime("%Y-%m"), "aaa5": r4(aaa5), "corr_now": r4(float(rc.iloc[-1]), 3),
            "classes": {}, "backtest": SG.backtest(rets, ORDER), "ref": SG.REF, "tilt": SG.TILT,
-           "variants": SG.backtest_combined(rets, ORDER, shiller)}
+           "variants": SG.backtest_combined(rets, ORDER, shiller),
+           "robustness": SG.trend_robustness(rets, ORDER)}
     for k in ORDER:
         v = val[k]
         out["classes"][k] = {
@@ -155,6 +209,29 @@ def signal_block(inputs: dict, rets: pd.DataFrame, rc: pd.Series, shiller: pd.Da
             "detail": {kk: (r4(x) if isinstance(x, float) else x) for kk, x in v.items() if kk != "score"},
         }
     return out
+
+
+LIMITS = {"cash": 0.02, "bund": 0.15, "credit": 0.15, "eq_eu": 0.35, "eq_us": 0.35, "eq_em": 0.40, "gold": 0.35}
+
+
+def hard_checks(rets: pd.DataFrame) -> None:
+    """Stop before publishing if the latest monthly returns are implausible
+    (a broken download rather than a market move). The page then keeps its
+    last good state and the failed run shows up in GitHub."""
+    tail = rets[ORDER].iloc[-6:]
+    bad = [(k, d.strftime("%Y-%m"), float(v)) for k in ORDER for d, v in tail[k].items() if abs(v) > LIMITS[k]]
+    if bad:
+        raise SystemExit(f"Unplausible Monatsrenditen, nichts veröffentlicht: {bad}")
+
+
+def status_block(checks: list) -> dict:
+    try:
+        log = json.loads((ROOT / "data" / "raw" / "fetch_log.json").read_text())
+    except FileNotFoundError:
+        log = {}
+    st = log.get("status", {})
+    return {"fetched": log.get("fetched"), "sources_ok": log.get("sources_ok"), "sources": log.get("sources"),
+            "failed": [k for k, v in st.items() if v != "ok"], "checks": checks}
 
 
 def regime_now(rc: pd.Series) -> dict:
@@ -192,6 +269,11 @@ def main() -> None:
     credit_filled, bf = R.backfill_credit(raw, SAMPLE_START)
     rets["credit"] = credit_filled.loc[rets.index]
     assert not rets[ORDER].isna().any().any(), rets.isna().sum()
+    hard_checks(rets)
+    checks = list(live.get("checks", []))
+    lag = (pd.Period(as_of(inputs)[:7], "M") - pd.Period(rets.index[-1], "M")).n
+    if lag > 3:
+        checks.append(f"Monatsrenditen enden {rets.index[-1]:%Y-%m}, {lag} Monate vor dem Datenstand")
 
     cov_all, info_all = cov_block(rets, credit_obs)
     rc = rolling_stock_bond_corr(rets["eq_eu"], rets["bund"], 36)
@@ -240,6 +322,7 @@ def main() -> None:
             "gold_eom_from": R.monthly_returns(R.yahoo_monthly("GC=F")).index[0].strftime("%Y-%m"),
             "bund_mod_duration": r4(mod_dur, 2),
             "regime": regime_now(rc),
+            "status": status_block(checks),
         },
         "assets": [
             {
@@ -283,6 +366,7 @@ def main() -> None:
         "stress": stress,
         "signals": signal_block(inputs, rets, rc, sh),
         "validation": validation(raw),
+        "currency": currency_block(rets, inputs, cma),
         "history": {
             "start": hist_start.strftime("%Y-%m"),
             "returns": {k: [r4(x, 5) for x in rets[k].values] for k in ORDER},
@@ -292,6 +376,13 @@ def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(model, ensure_ascii=False, separators=(",", ":")))
     print(f"wrote {OUT} ({OUT.stat().st_size/1024:.0f} KB)")
+    # accepted valuation inputs: the fallback for the next run and the
+    # reference for its plausibility check (derived values only, no raw data)
+    from .market import DERIVED
+    DERIVED.parent.mkdir(parents=True, exist_ok=True)
+    DERIVED.write_text(json.dumps({"stand": as_of(inputs), **live.get("derived", {})}, ensure_ascii=False, indent=1))
+    for c in checks:
+        print("Prüfung:", c)
 
 
 if __name__ == "__main__":

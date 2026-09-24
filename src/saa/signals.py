@@ -167,3 +167,56 @@ def backtest_combined(rets: pd.DataFrame, order: list, shiller: pd.DataFrame) ->
                       "mdd": float((v / v.cummax() - 1).min()),
                       "start": r.index[0].strftime("%Y-%m"), "end": r.index[-1].strftime("%Y-%m")}
     return out
+
+
+# --------------------------------------------------------------------------
+# Robustness of the trend overlay: the same test with other parameters,
+# other costs and in two halves of the sample.
+
+def _trend_variant(rets, order, lookback=12, volwin=36, tiltmul=1.0, cost=COST, lag=1, sign_only=False):
+    lr = np.log1p(rets[order])
+    ex = lr.rolling(lookback).sum().sub(lr["cash"].rolling(lookback).sum(), axis=0)
+    if sign_only:
+        s = np.sign(ex)
+    else:
+        vol = rets[order].rolling(volwin).std() * np.sqrt(12)
+        s = (ex * 12 / lookback / vol).clip(-1.5, 1.5) / 1.5
+    s["cash"] = 0.0
+    s = s.shift(lag)
+    w = pd.DataFrame(index=s.index, columns=order, dtype=float)
+    for k in order:
+        w[k] = REF[k] + TILT[k] * tiltmul * s[k]
+    w["cash"] = 1 - w.drop(columns="cash").sum(axis=1)
+    w = w.clip(lower=0)
+    turn = w.diff().abs().sum(axis=1).fillna(0)
+    rt = (w * rets[order]).sum(axis=1) - cost * turn
+    rr = (pd.DataFrame([REF] * len(rets), index=rets.index)[order] * rets[order]).sum(axis=1)
+    return (rt - rr).where(w.notna().all(axis=1))
+
+
+def trend_robustness(rets: pd.DataFrame, order: list) -> list[dict]:
+    base = _trend_variant(rets, order).dropna()
+    start, end = base.index[0], base.index[-1]
+    mid = pd.Timestamp("2009-12-31")
+    cases = [
+        ("Basis: 12 Monate, 36-Monats-Volatilität, 10 Bp. Kosten", {}, None),
+        ("Rückblick 6 Monate", {"lookback": 6}, None),
+        ("Rückblick 9 Monate", {"lookback": 9}, None),
+        ("Nur Vorzeichen, ohne Volatilitätsskalierung", {"sign_only": True}, None),
+        ("Halbe Verschiebung", {"tiltmul": 0.5}, None),
+        ("Doppelte Verschiebung", {"tiltmul": 2.0}, None),
+        ("Dreifache Kosten (30 Bp.)", {"cost": 0.003}, None),
+        ("Signal einen Monat später umgesetzt", {"lag": 2}, None),
+        (f"Nur {start.year} bis 2009", {}, (start, mid)),
+        (f"Nur 2010 bis {end.year}", {}, (mid + pd.offsets.MonthEnd(1), end)),
+    ]
+    out = []
+    for label, kw, win in cases:
+        d = _trend_variant(rets, order, **kw).loc[start:end].dropna()
+        if win:
+            d = d.loc[win[0]:win[1]]
+        yearly = (1 + d).groupby(d.index.year).prod() - 1
+        out.append({"label": label, "excess_pa": float(d.mean() * 12), "ir": float(d.mean() / d.std() * np.sqrt(12)),
+                    "t_stat": float(d.mean() / d.std() * np.sqrt(len(d))), "hit_years": float((yearly > 0).mean()),
+                    "start": d.index[0].strftime("%Y-%m"), "end": d.index[-1].strftime("%Y-%m")})
+    return out
