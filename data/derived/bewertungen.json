@@ -37,7 +37,7 @@
    "dy_source": "msci",
    "cape": 26.671,
    "dy": 0.0201,
-   "coverage": 0.9266000000000001,
+   "coverage": 0.9266,
    "top": [
     [
      "Taiwan",
@@ -50,7 +50,7 @@
    ]
   }
  },
- "bund": 0.0345,
+ "bund": 0.0352,
  "estr": 0.0244,
  "credit_ytm": 0.0414
 }
