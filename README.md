@@ -8,7 +8,7 @@ Nebenbedingungen, Vermögensprojektion und Stresstests mit regimeabhängigen Kor
 
 **Live:** https://philip-kroos.github.io/strategische-allokation/
 
-**Arbeitspapier:** [Bewertung für die Strategie, Trend für die Taktik](docs/arbeitspapier.pdf) (2 Seiten, Stand September 2026)
+**Arbeitspapier:** [Bewertung für die Strategie, Trend für die Taktik](docs/arbeitspapier.pdf) (2 Seiten, wird mit jedem Datenupdate neu gesetzt)
 
 ## Was das Modell macht
 
@@ -60,10 +60,17 @@ Jede Quelle wird einzeln geladen. Fällt eine aus, bleibt die letzte Datei stehe
 hält fest, was geklappt hat. Bundrendite, €STR, Spread und Kurse kommen direkt aus den Daten.
 Die French Data Library veröffentlicht mit ein bis zwei Monaten Verzug. Fehlende Monate der Aktienreihen
 werden mit Index-ETFs in EUR überbrückt (EXSA, SXR8, IEMM) und später durch die Indexdaten ersetzt.
-CAPE und Dividendenrendite je Region haben keine freie Monatsquelle: sie stehen als datierte Anker in
-`config/inputs.json` und werden mit dem Kursindex fortgeschrieben, wobei der Zehnjahresdurchschnitt der
-Gewinne mit realem Wachstum plus Inflation mitwächst. Die Anker einmal im Quartal zu erneuern hält die
-Abweichung klein.
+Bewertungen kommen ebenfalls automatisch: CAPE je Land monatlich von Siblis Research, die
+Dividendenrendite aus den monatlichen MSCI-Factsheets (USA, Europa, Schwellenländer), die Länderanteile
+für Europa und Schwellenländer aus den iShares-Fonds (IEUR, EEM). Bis zur nächsten Veröffentlichung
+schreibt das Modell die Werte mit dem Kursindex fort. Im Test mit US-Daten seit 1960 lag diese
+Fortschreibung nach zwölf Monaten im Median 2,6 % neben dem tatsächlichen CAPE. Fällt eine Quelle aus,
+gilt der letzte Wert und wird ebenso fortgeschrieben; `config/inputs.json` enthält nur noch Ersatzwerte
+und Modellannahmen (fairer CAPE, Wachstum, Rückkäufe, Inflation).
+
+Das Arbeitspapier (`docs/arbeitspapier.pdf`) wird bei jedem Lauf neu gesetzt: `paper/make_pdf.py` liest die
+Quoten aus der fertigen Seite, `paper/build_paper.py` schreibt den Text aus den Modellzahlen, auch die
+Aussagen zu Regime, Positionierung und Trend.
 
 ## Datenquellen
 
@@ -74,7 +81,7 @@ Abweichung klein.
 - Robert Shiller, S&P Composite (über datasets/s-and-p-500)
 - Gold: COMEX-Future GC=F (Monatsende, ab Nov. 2000), davor Weltbank-Monatsdurchschnitte (über datasets/gold-prices)
 - Yahoo Finance: Monatskurse iShares Core € Corp Bond (IEAC) sowie ETFs zur Kontrolle der Indexreihen
-- Siblis Research (CAPE nach Ländern), MSCI (Länderanteile EM)
+- Siblis Research (CAPE und Dividendenrendite nach Ländern), MSCI (Index-Factsheets), iShares (Länderanteile)
 
 ## Hinweis
 
