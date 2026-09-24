@@ -62,7 +62,7 @@ def svg_returns() -> str:
         lx = x(a["expected"]) + 4 if clear else x(max(a["expected"], a["hist_geo"])) + 6
         out.append(f'<text x="{lx:.1f}" y="{y + 3.5}" class="val">{pct(a["expected"])}</text>')
     out.append(f'<rect x="{L}" y="4" width="10" height="8" class="bar"/><text x="{L + 14}" y="11.5" class="ax">Erwartet, 10 Jahre</text>')
-    out.append(f'<circle cx="{L + 112}" cy="8" r="3.6" class="hist"/><text x="{L + 119}" y="11.5" class="ax">Realisiert 1990–2026</text>')
+    out.append(f'<circle cx="{L + 112}" cy="8" r="3.6" class="hist"/><text x="{L + 119}" y="11.5" class="ax">Realisiert {M["meta"]["sample"][0][:4]}–{M["meta"]["sample"][1][:4]}</text>')
     out.append("</svg>")
     return "".join(out)
 
@@ -116,15 +116,141 @@ stat = lambda w: (float(w @ mu), float(np.sqrt(w @ C @ w)))
 er_ref, vol_ref = stat(w_ref)
 er_tac, vol_tac = stat(w_tac / w_tac.sum())
 
+SHORT = {"bund": "Bundesanleihen", "credit": "Euro-Unternehmensanleihen", "eq_eu": "Aktien Europa",
+         "eq_us": "Aktien USA", "eq_em": "Aktien Schwellenländer", "gold": "Gold", "cash": "Geldmarkt"}
+REGION = {"eq_eu": "Europa", "eq_us": "USA", "eq_em": "Schwellenländer"}
+EQ = ["eq_eu", "eq_us", "eq_em"]
+tr = {k: CL[k]["trend"] for k in K}
+act = {k: w_tac[i] - S["ref"][k] for i, k in enumerate(K)}
+tilt = {k: w_tac[i] - w_str[i] for i, k in enumerate(K)}
+pos_regime = corr_now > 0
+
+
+def join(xs):
+    xs = list(xs)
+    return "" if not xs else xs[0] if len(xs) == 1 else ", ".join(xs[:-1]) + " und " + xs[-1]
+
+
+def trend_word(k):
+    t = tr[k]
+    return "Trend positiv." if t > 0.2 else "Trend negativ." if t < -0.2 else "Trend ohne klare Richtung."
+
+
+def since_regime():
+    i = len(corr) - 1
+    while i > 0 and (corr[i - 1][1] > 0) == pos_regime:
+        i -= 1
+    return corr[i][0]
+
+
+best_eq = max(EQ, key=lambda k: A[k]["expected"])
+worst_eq = min(EQ, key=lambda k: A[k]["expected"])
+top = A["eq_em"]["detail"].get("top_countries") or []
+spread = CL["credit"]["detail"]["spread"]
 why = {
-    "bund": f"Startrendite {pct(A['bund']['expected'])}, real {pct(CL['bund']['detail']['real_yield'])}. Trend negativ, Absicherung schwächer.",
-    "credit": f"Rendite {pct(A['credit']['expected'])} bei halber Duration. Spreads eng, Gesamtrendite trotzdem über Bunds.",
-    "eq_eu": f"CAPE {num(A['eq_eu']['detail']['cape'], 1)}, höchste erwartete Rendite. Trend positiv.",
-    "eq_us": f"CAPE {num(A['eq_us']['detail']['cape'], 1)}, erwartet {pct(A['eq_us']['expected'])}. Trend positiv, mildert das Untergewicht.",
-    "eq_em": "Bewertung durch Taiwan und Südkorea erhöht. Trend positiv.",
-    "gold": f"Real am {int(round(CL['gold']['detail']['pct'] * 100))}. Perzentil seit 1975. Starker Trend hält Restposition.",
+    "bund": f"Startrendite {pct(A['bund']['expected'])}, real {pct(CL['bund']['detail']['real_yield'])}. {trend_word('bund')}"
+            + (" Absicherung schwächer." if pos_regime else " Sichert Aktienrisiken ab."),
+    "credit": f"Rendite {pct(A['credit']['expected'])} bei halber Duration. "
+              + ("Spreads eng, Gesamtrendite trotzdem über Bunds." if spread < CL["credit"]["detail"]["normal"]
+                 else "Spreads über dem Normalniveau."),
+    "eq_eu": f"CAPE {num(A['eq_eu']['detail']['cape'], 1)}, "
+             + ("höchste erwartete Rendite. " if best_eq == "eq_eu" else f"erwartet {pct(A['eq_eu']['expected'])}. ")
+             + trend_word("eq_eu"),
+    "eq_us": f"CAPE {num(A['eq_us']['detail']['cape'], 1)}, erwartet {pct(A['eq_us']['expected'])}. " + trend_word("eq_us"),
+    "eq_em": (f"{top[0][0]} und {top[1][0]} machen {pct(top[0][1] + top[1][1], 0)} des Index aus. " if len(top) > 1 else "")
+             + trend_word("eq_em"),
+    "gold": f"Real am {int(round(CL['gold']['detail']['pct'] * 100))}. Perzentil seit 1975. " + trend_word("gold"),
     "cash": "Restgröße.",
 }
+over = [SHORT[k] for k in sorted(K, key=lambda k: -act[k]) if k != "cash" and act[k] > 0.015]
+under = [SHORT[k] for k in sorted(K, key=lambda k: act[k]) if k != "cash" and act[k] < -0.015]
+kp4 = "Positionierung:</b> " + (f"{join(over)} über" if over else "")
+kp4 += (", " if over and under else "") + (f"{join(under)} unter dem Referenzportfolio." if under else " dem Referenzportfolio.")
+if not over and not under:
+    kp4 = "Positionierung:</b> Nahe am Referenzportfolio."
+risk_word = "ähnlichem" if abs(vol_tac - vol_ref) < 0.01 else ("etwas höherem" if vol_tac > vol_ref else "etwas niedrigerem")
+kp4 += f" Erwartete Rendite {pct(er_tac)} statt {pct(er_ref)} p. a. bei {risk_word} Risiko."
+
+gap = A[best_eq]["expected"] - A[worst_eq]["expected"]
+cheap_explains = A[worst_eq]["detail"]["cape"] > A[best_eq]["detail"]["cape"]
+all_below = all(A[k]["expected"] < A[k]["hist_geo"] for k in EQ)
+kp1_head = ("Die Renditeerwartungen liegen unter der Vergangenheit und sind ungleich verteilt." if all_below and gap > 0.01
+            else "Die Renditeerwartungen sind ungleich verteilt." if gap > 0.01
+            else "Die Renditeerwartungen liegen unter der Vergangenheit." if all_below
+            else "Die Renditeerwartungen je Region liegen nah beieinander.")
+kp1 = (f"<b>{kp1_head}</b> Für {SHORT[best_eq]} erwarten wir {pct(A[best_eq]['expected'])} p. a. in Euro über zehn Jahre, "
+       f"für {SHORT[worst_eq]} {pct(A[worst_eq]['expected'])}.")
+if cheap_explains and gap > 0.01:
+    kp1 += (f" Der Abstand kommt vor allem aus der Bewertung: CAPE {num(A[worst_eq]['detail']['cape'], 1)} "
+            f"gegenüber {num(A[best_eq]['detail']['cape'], 1)}.")
+
+vb, vt = V["bewertung"], V["trend"]
+if vb["excess_pa"] < 0 < vt["excess_pa"]:
+    kp2 = (f"<b>Bewertung taugt nicht zum Timing.</b> Als Monatssignal hätte sie seit {BT['start'][:4]} {pct(-vb['excess_pa'])} p. a. gekostet. "
+           f"Das Trendsignal hat {pct(vt['excess_pa'])} p. a. gebracht (t-Wert {num(vt['t_stat'], 1)}). "
+           "Bewertung steuert deshalb die strategische Quote, Trend die taktische Abweichung.")
+else:
+    kp2 = (f"<b>Bewertung und Trend wirken auf verschiedenen Horizonten.</b> Als Monatssignal brachte Bewertung seit {BT['start'][:4]} "
+           f"{pct(vb['excess_pa'], 1, True)} p. a., Trend {pct(vt['excess_pa'], 1, True)} p. a. (t-Wert {num(vt['t_stat'], 1)}). "
+           "Bewertung steuert die strategische Quote, Trend die taktische Abweichung.")
+
+since = since_regime()
+if pos_regime:
+    kp3 = (f"<b>Anleihen sichern schwächer ab.</b> Aktien und Bundesanleihen laufen seit {month(since)} gleichgerichtet, "
+           f"die 36-Monats-Korrelation liegt bei {num(corr_now)}. Wir rechnen mit den Korrelationen dieses Inflationsregimes.")
+    s3_title = "Das Korrelationsregime hat gedreht"
+    s3_hist = f"So war es in den 1990er Jahren, und so ist es wieder seit {month(since)} (Abbildung 2)."
+    s3_use = "Für die aktuelle Allokation rechnen wir mit dem Inflationsregime."
+    s3_cons = (f"Die Konsequenz: Bundesanleihen verdienen ihren Platz über die Rendite, weniger über die Absicherung. "
+               f"Euro-Unternehmensanleihen bieten {pct(A['credit']['expected'] - A['bund']['expected'])} mehr bei rund halber Duration.")
+    s5_regime = ("<b>Regime.</b> Kippt die Korrelation zurück ins Negative, etwa in einer Rezession mit fallender Inflation, "
+                 "gewinnen Bundesanleihen an Wert. Dann spricht mehr für längere Laufzeiten.")
+else:
+    kp3 = (f"<b>Anleihen sichern wieder ab.</b> Aktien und Bundesanleihen laufen seit {month(since)} gegenläufig, "
+           f"die 36-Monats-Korrelation liegt bei {num(corr_now)}. Wir rechnen mit den Korrelationen dieses Wachstumsregimes.")
+    s3_title = "Anleihen sichern wieder ab"
+    s3_hist = f"Von 2022 an liefen beide gleichgerichtet. Seit {month(since)} ist die Korrelation wieder negativ (Abbildung 2)."
+    s3_use = "Für die aktuelle Allokation rechnen wir mit dem Wachstumsregime."
+    s3_cons = (f"Die Konsequenz: Bundesanleihen dämpfen Aktienverluste wieder. "
+               f"Euro-Unternehmensanleihen bieten {pct(A['credit']['expected'] - A['bund']['expected'])} mehr Rendite, sichern aber weniger ab.")
+    s5_regime = ("<b>Regime.</b> Kehrt die Inflation zurück, laufen Aktien und Anleihen wieder gleichgerichtet. "
+                 "Dann verlieren lange Laufzeiten ihre Schutzwirkung.")
+
+# paragraph after the positioning table
+a_sorted = sorted([k for k in K if k != "cash"], key=lambda k: act[k])
+big_over, big_under = a_sorted[-1], a_sorted[0]
+s4 = []
+if act[big_over] > 0.015 and act[big_under] < -0.015:
+    s4.append(f"Die größte Verschiebung ist {SHORT[big_over]} ({pct(act[big_over], 0, True)}) gegen {SHORT[big_under]} "
+              f"({pct(act[big_under], 0, True)}).")
+def pts(x):
+    n = int(round(abs(x) * 100))
+    return f"{n} Punkt" if n == 1 else f"{n} Punkte"
+
+
+ups = [f"{SHORT[k]} um {pts(tilt[k])}" for k in sorted(K, key=lambda k: -tilt[k]) if k != "cash" and tilt[k] >= 0.015]
+dns = [f"{SHORT[k]} um {pts(tilt[k])}" for k in sorted(K, key=lambda k: tilt[k]) if k != "cash" and tilt[k] <= -0.015]
+if ups or dns:
+    s4.append("Der Trend " + " und ".join(x for x in [f"erhöht {join(ups)}" if ups else "", f"senkt {join(dns)}" if dns else ""] if x) + ".")
+if CL["gold"]["val"] < -0.5 and tr["gold"] > 0.5:
+    s4.append("Bei Gold spricht die Bewertung dagegen, der Trend dafür. Der Trend hält eine kleine Position, statt sie ganz abzubauen.")
+s4 = " ".join(s4)
+
+usd = lambda w: float(w[K.index("eq_us")] + w[K.index("gold")])
+s5_usd = (f"<b>Dollar.</b> US-Aktien und Gold sind ungesichert. Ein um 10 % stärkerer Euro kostet ein Depot mit 45 % Dollar-Anlagen rund 4,5 %. "
+          f"Das Modellportfolio hält {pct(usd(w_tac), 0)} in Dollar-Anlagen, das Referenzportfolio {pct(usd(w_ref), 0)}.")
+
+bt_up = BT["excess_pa"] > 0
+s2_trend = (f"Das Trendsignal misst die Überrendite der letzten zwölf Monate über Geldmarkt, geteilt durch die Schwankung. "
+            f"Es hat die Rendite um {pct(abs(BT['excess_pa']))} p. a. {'erhöht' if bt_up else 'gesenkt'}, bei einem Tracking Error von {pct(BT['te'])}. "
+            f"In {int(round(BT['hit_years'] * 100))} % der Jahre lag das Portfolio mit Trend vor der Referenz, der maximale Verlust "
+            f"{'sank' if BT['tactical']['mdd'] > BT['reference']['mdd'] else 'stieg'} von {pct(BT['reference']['mdd'])} auf {pct(BT['tactical']['mdd'])}.")
+y0, y1 = M["meta"]["sample"][0][:4], M["meta"]["sample"][1][:4]
+s1_last = (f"Das Ergebnis liegt für {'jede Aktienregion' if all_below else 'die meisten Aktienregionen'} unter der Rendite seit {y0} (Abbildung 1). "
+           "Die hohen Renditen der Vergangenheit kamen zu einem großen Teil aus steigenden Bewertungen. Das lässt sich nicht fortschreiben. "
+           "Fremdwährungen rechnen wir ungesichert und ohne erwartete Wechselkursänderung.")
+cape_fit, bond_fit = M["cape"], M["bonds"]
+
 pos_rows = "".join(
     f"<tr><td>{names[k]}</td><td>{pct(S['ref'][k], 0)}</td><td>{pct(w_str[i], 0)}</td>"
     f"<td><b>{pct(w_tac[i], 0)}</b></td><td class='{'pos' if w_tac[i] - S['ref'][k] > 0.005 else 'neg' if w_tac[i] - S['ref'][k] < -0.005 else ''}'>"
@@ -203,17 +329,17 @@ footer{{margin-top:8pt;border-top:.6pt solid var(--rule);padding-top:4pt}}
 </header>
 
 <div class="key"><div class="t">Kernaussagen</div><ol>
-<li><b>Die Renditeerwartungen sind bescheiden und ungleich verteilt.</b> US-Aktien erwarten wir mit {pct(us['expected'])} p. a. in Euro über zehn Jahre, europäische mit {pct(eu['expected'])}. Der Abstand kommt fast ganz aus der Bewertung: CAPE {num(d(us)['cape'], 1)} gegenüber {num(d(eu)['cape'], 1)}.</li>
-<li><b>Bewertung taugt nicht zum Timing.</b> Als Monatssignal hätte sie seit 1993 {pct(-V['bewertung']['excess_pa'])} p. a. gekostet. Das Trendsignal hat {pct(V['trend']['excess_pa'])} p. a. gebracht (t-Wert {num(V['trend']['t_stat'], 1)}). Bewertung steuert deshalb die strategische Quote, Trend die taktische Abweichung.</li>
-<li><b>Anleihen sichern schwächer ab.</b> Aktien und Bundesanleihen laufen seit 2022 gleichgerichtet, die 36-Monats-Korrelation liegt bei {num(corr_now)}. Wir rechnen mit den Korrelationen dieses Inflationsregimes.</li>
-<li><b>Positionierung:</b> Aktien Europa und Euro-Unternehmensanleihen über, Aktien USA, Gold und Bundesanleihen unter dem Referenzportfolio. Erwartete Rendite {pct(er_tac)} statt {pct(er_ref)} p. a. bei ähnlichem Risiko.</li>
+<li>{kp1}</li>
+<li>{kp2}</li>
+<li>{kp3}</li>
+<li><b>{kp4}</li>
 </ol></div>
 
 <h2><span class="no">1</span>Was die nächsten zehn Jahre bringen können</h2>
-<figure class="fig"><figcaption><b>Abbildung 1</b> Erwartete Rendite p. a. über zehn Jahre und realisierte Rendite 1990 bis 2026, nominal in EUR</figcaption>{svg_returns()}</figure>
-<p>Für Anleihen ist die heutige Rendite der beste Schätzer der Rendite des nächsten Jahrzehnts. Bei zehnjährigen Bundesanleihen erklärt sie seit 1972 rund 86 % der Streuung der Folgerenditen. Heute sind das {pct(A['bund']['expected'])}, bei Euro-Unternehmensanleihen nach erwarteten Ausfällen {pct(A['credit']['expected'])}.</p>
-<p>Für Aktien mitteln wir zwei Verfahren. Das erste regressiert die reale Rendite der Folgedekade auf die Ertragsrendite 1/CAPE (Shiller-Daten 1881 bis 2013, R² 0,28, außerhalb der Stichprobe 0,20). Das zweite addiert Dividendenrendite, Nettorückkäufe und reales Gewinnwachstum und zieht eine teilweise Rückkehr der Bewertung zum fairen Niveau ab. Für die USA ergeben beide {pct(d(us)['m1_regression_real'])} und {pct(d(us)['m2_building_blocks_real'])} real, für Europa {pct(d(eu)['m1_regression_real'])} und {pct(d(eu)['m2_building_blocks_real'])}.</p>
-<p>Das Ergebnis liegt für jede Aktienregion deutlich unter der Rendite seit 1990 (Abbildung 1). Die hohen Renditen der Vergangenheit kamen zu einem großen Teil aus steigenden Bewertungen. Das lässt sich nicht fortschreiben. Fremdwährungen rechnen wir ungesichert und ohne erwartete Wechselkursänderung.</p>
+<figure class="fig"><figcaption><b>Abbildung 1</b> Erwartete Rendite p. a. über zehn Jahre und realisierte Rendite {y0} bis {y1}, nominal in EUR</figcaption>{svg_returns()}</figure>
+<p>Für Anleihen ist die heutige Rendite der beste Schätzer der Rendite des nächsten Jahrzehnts. Bei zehnjährigen Bundesanleihen erklärt sie seit 1972 rund {num(bond_fit['r2'] * 100, 0)} % der Streuung der Folgerenditen. Heute sind das {pct(A['bund']['expected'])}, bei Euro-Unternehmensanleihen nach erwarteten Ausfällen {pct(A['credit']['expected'])}.</p>
+<p>Für Aktien mitteln wir zwei Verfahren. Das erste regressiert die reale Rendite der Folgedekade auf die Ertragsrendite 1/CAPE (Shiller-Daten 1881 bis 2013, R² {num(cape_fit['r2'])}, außerhalb der Stichprobe {num(cape_fit['oos_r2'])}). Das zweite addiert Dividendenrendite, Nettorückkäufe und reales Gewinnwachstum und zieht eine teilweise Rückkehr der Bewertung zum fairen Niveau ab. Für die USA ergeben beide {pct(d(us)['m1_regression_real'])} und {pct(d(us)['m2_building_blocks_real'])} real, für Europa {pct(d(eu)['m1_regression_real'])} und {pct(d(eu)['m2_building_blocks_real'])}.</p>
+<p>{s1_last}</p>
 
 <h2><span class="no">2</span>Warum Bewertung kein Timing-Signal ist</h2>
 <div class="side">
@@ -221,27 +347,27 @@ footer{{margin-top:8pt;border-top:.6pt solid var(--rule);padding-top:4pt}}
 <table><thead><tr><th>Monatssignal</th><th>p. a.</th><th>Information Ratio</th><th>t-Wert</th></tr></thead><tbody>{var_rows}</tbody></table>
 <p class="note">Referenzportfolio: Geldmarkt 5 %, Bundesanleihen 20 %, Unternehmensanleihen 15 %, Aktien Europa 22 %, USA 23 %, Schwellenländer 8 %, Gold 7 %. Das Bewertungssignal deckt Aktien USA, Bundesanleihen und Gold ab, für die lange Historien ohne Blick in die Zukunft vorliegen.</p>
 </div>
-<p>Bewertung sagt viel über das nächste Jahrzehnt und wenig über den nächsten Monat. Teure Märkte werden oft über Jahre noch teurer, der US-Markt ab 1995 und wieder seit 2013. Wer monatlich nach Bewertung umschichtet, steigt zu früh aus.</p>
+<p>Bewertung sagt viel über das nächste Jahrzehnt und wenig über den nächsten Monat. Teure Märkte werden oft über Jahre noch teurer, der US-Markt ab 1995 und wieder ab 2013. Wer monatlich nach Bewertung umschichtet, steigt zu früh aus.</p>
 <p>Wir haben das getestet. Ein Referenzportfolio wird jeden Monat um bis zu fünf Prozentpunkte je Anlageklasse verschoben, nach Signalen, die nur Daten des Vormonats nutzen. Faire Werte und Perzentile sind zu jedem Zeitpunkt nur aus der bis dahin bekannten Historie geschätzt. Kosten: 10 Basispunkte je Umschichtung. Zeitraum {bt_span}.</p>
-<p>Das Trendsignal misst die Überrendite der letzten zwölf Monate über Geldmarkt, geteilt durch die Schwankung. Es hat die Rendite um {pct(BT['excess_pa'])} p. a. erhöht, bei einem Tracking Error von {pct(BT['te'])}. In {int(round(BT['hit_years'] * 100))} % der Jahre lag das Portfolio mit Trend vor der Referenz, der maximale Verlust sank von {pct(BT['reference']['mdd'])} auf {pct(BT['tactical']['mdd'])}.</p>
-<p>Die Folgerung ist eine Arbeitsteilung. Bewertung geht über die erwarteten Renditen in die strategische Quote ein. Trend verschiebt diese Quote taktisch. Der Zwölfmonatszeitraum ist der übliche Standard und nicht auf diese Daten optimiert.</p>
+<p>{s2_trend}</p>
+<p>{'Die Folgerung ist eine Arbeitsteilung.' if vb['excess_pa'] < 0 < vt['excess_pa'] else 'Das Modell hält an der Arbeitsteilung fest.'} Bewertung geht über die erwarteten Renditen in die strategische Quote ein. Trend verschiebt diese Quote taktisch. Der Zwölfmonatszeitraum ist der übliche Standard und nicht auf diese Daten optimiert.</p>
 
-<h2><span class="no">3</span>Das Korrelationsregime hat gedreht</h2>
+<h2><span class="no">3</span>{s3_title}</h2>
 <figure class="fig"><figcaption><b>Abbildung 2</b> Rollierende 36-Monats-Korrelation, Aktien Europa gegenüber Bundesanleihen 10 J., Monatsrenditen in EUR. Rot: positive Korrelation ({n_pos} von {len(corr)} Monaten)</figcaption>{svg_corr()}</figure>
-<p>Die Absicherung durch Staatsanleihen hängt davon ab, welche Schocks die Märkte treiben. Bei Wachstumsschocks fallen Aktien und Zinsen gemeinsam, Anleihen gewinnen. Bei Inflationsschocks steigen die Zinsen, und beide verlieren. So war es in den 1990er Jahren, und so ist es wieder seit 2022 (Abbildung 2).</p>
-<p>Wir schätzen deshalb getrennte Kovarianzmatrizen für beide Regime, nach dem Vorzeichen der rollierenden Korrelation. Im Inflationsregime liegt die Korrelation von europäischen Aktien und Bunds bei {num(regime_corr('pos'))}, im Wachstumsregime bei {num(regime_corr('neg'))}. Für die aktuelle Allokation rechnen wir mit dem Inflationsregime.</p>
-<p>Die Konsequenz: Bundesanleihen verdienen ihren Platz über die Rendite, weniger über die Absicherung. Euro-Unternehmensanleihen bieten {pct(A['credit']['expected'] - A['bund']['expected'])} mehr bei rund halber Duration. Ein Zinsanstieg um einen Prozentpunkt kostet Bunds etwa {pct(M['meta']['bund_mod_duration'] / 100, 0)}, den Unternehmensanleihen-Index etwa 4 %.</p>
+<p>Die Absicherung durch Staatsanleihen hängt davon ab, welche Schocks die Märkte treiben. Bei Wachstumsschocks fallen Aktien und Zinsen gemeinsam, Anleihen gewinnen. Bei Inflationsschocks steigen die Zinsen, und beide verlieren. {s3_hist}</p>
+<p>Wir schätzen deshalb getrennte Kovarianzmatrizen für beide Regime, nach dem Vorzeichen der rollierenden Korrelation. Im Inflationsregime liegt die Korrelation von europäischen Aktien und Bunds bei {num(regime_corr('pos'))}, im Wachstumsregime bei {num(regime_corr('neg'))}. {s3_use}</p>
+<p>{s3_cons} Ein Zinsanstieg um einen Prozentpunkt kostet Bunds etwa {pct(M['meta']['bund_mod_duration'] / 100, 0)}, den Unternehmensanleihen-Index etwa 4 %.</p>
 
 <h2><span class="no">4</span>Positionierung</h2>
 <p>Das Modellportfolio maximiert die erwartete Rendite bei 8 % Volatilität. Die Renditeannahmen werden im Stil von Black und Litterman an das Referenzportfolio gebunden, jede Anlageklasse darf höchstens zehn Prozentpunkte abweichen. Darauf kommt die taktische Verschiebung aus dem Trend, Signale zum {sig_month}.</p>
 <table><thead><tr><th>Anlageklasse</th><th>Referenz</th><th>Strategisch</th><th>Mit Trend</th><th>Abweichung</th><th class="why">Begründung</th></tr></thead><tbody>{pos_rows}</tbody></table>
-<p>Die größte Wette ist Europa gegen USA. Sie folgt aus der Bewertung und wird vom Trend nicht gestützt, denn beide Regionen haben positive Trends. Der positive US-Trend verringert das Untergewicht deshalb um zwei Punkte. Bei Gold ist es umgekehrt: Die Bewertung spricht dagegen, der Trend dafür. Der Trend hält eine kleine Position, statt sie ganz abzubauen.</p>
+<p>{s4}</p>
 
 <h2><span class="no">5</span>Risiken der Einschätzung</h2>
-<p><b>Dollar.</b> US-Aktien und Gold sind ungesichert. Ein um 10 % stärkerer Euro kostet ein Depot mit 45 % Dollar-Anlagen rund 4,5 %. Das Untergewicht in USA und Gold senkt dieses Risiko gleich mit. <b>Trendwenden.</b> Nach scharfen Einbrüchen erholen sich Märkte oft schneller, als das Zwölfmonatssignal reagiert, so 2009 und 2020. Die Mehrrendite kommt aus längeren Phasen, nicht aus Wendepunkten. <b>Schätzfehler.</b> Die Bandbreite der erwarteten Rendite ist für Aktien groß, für die USA {pct(us['band'][0])} bis {pct(us['band'][1])} p. a. Die Begrenzung auf zehn Prozentpunkte je Anlageklasse trägt dem Rechnung. <b>Regime.</b> Kippt die Korrelation zurück ins Negative, etwa in einer Rezession mit fallender Inflation, gewinnen Bundesanleihen an Wert. Dann spricht mehr für längere Laufzeiten.</p>
+<p>{s5_usd} <b>Trendwenden.</b> Nach scharfen Einbrüchen erholen sich Märkte oft schneller, als das Zwölfmonatssignal reagiert, so 2009 und 2020. Die Mehrrendite kommt aus längeren Phasen, nicht aus Wendepunkten. <b>Schätzfehler.</b> Die Bandbreite der erwarteten Rendite ist für Aktien groß, für die USA {pct(us['band'][0])} bis {pct(us['band'][1])} p. a. Die Begrenzung auf zehn Prozentpunkte je Anlageklasse trägt dem Rechnung. {s5_regime}</p>
 
 <footer class="note">
-<b>Methode.</b> Monatsrenditen in EUR {M['meta']['sample'][0][:4]} bis {M['meta']['sample'][1][:4]}. Aktien: Kenneth R. French Data Library, in Euro umgerechnet. Bundesanleihen: Zinsstruktur der Bundesbank, Monatsende, als Parianleihe mit zehn Jahren Laufzeit. Unternehmensanleihen: ETF-Kurse ab 2009, davor aus Zinsen und Aktien rekonstruiert. Kovarianzen mit Ledoit-Wolf-Schrumpfung, kürzere Historien per Stambaugh-Projektion. Portfolio mit exaktem Active-Set-Löser. Die Daten werden monatlich automatisch aktualisiert. Modell, Daten und Code: {URL}. Keine Anlageberatung.
+<b>Methode.</b> Monatsrenditen in EUR {M['meta']['sample'][0][:4]} bis {M['meta']['sample'][1][:4]}. Aktien: Kenneth R. French Data Library, in Euro umgerechnet. Bundesanleihen: Zinsstruktur der Bundesbank, Monatsende, als Parianleihe mit zehn Jahren Laufzeit. Unternehmensanleihen: ETF-Kurse ab 2009, davor aus Zinsen und Aktien rekonstruiert. Kovarianzen mit Ledoit-Wolf-Schrumpfung, kürzere Historien per Stambaugh-Projektion. Portfolio mit exaktem Active-Set-Löser. Die Daten und dieses Papier werden zweimal im Monat automatisch aktualisiert. Modell, Daten und Code: {URL}. Keine Anlageberatung.
 </footer>
 </body></html>"""
 
