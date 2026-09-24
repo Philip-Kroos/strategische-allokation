@@ -1,0 +1,34 @@
+{
+ "eq_em": {
+  "asof": "2026-09-22",
+  "weights": {
+   "Taiwan": 28.39,
+   "South Korea": 21.45,
+   "China": 19.88,
+   "India": 10.76,
+   "Brazil": 4.1,
+   "South Africa": 3.04,
+   "Saudi Arabia": 2.29,
+   "Mexico": 1.59,
+   "United Arab Emirates": 1.2,
+   "Poland": 1.16
+  }
+ },
+ "eq_eu": {
+  "asof": "2026-09-22",
+  "weights": {
+   "United Kingdom": 22.9,
+   "France": 14.17,
+   "Switzerland": 13.75,
+   "Germany": 13.13,
+   "Netherlands": 8.49,
+   "Spain": 5.95,
+   "Sweden": 5.95,
+   "Italy": 5.17,
+   "Denmark": 2.7,
+   "Finland": 1.94,
+   "Belgium": 1.91,
+   "Norway": 1.5
+  }
+ }
+}
