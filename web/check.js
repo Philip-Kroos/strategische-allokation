@@ -27,7 +27,7 @@
   // expected returns (valuation), active bets limited to +/-BAND around the
   // reference portfolio, then the tactical trend tilt on top.
   function modelWeights(vol) {
-    const S = SIG.pos, cf = state.conf; state.conf = 0.25;
+    const S = SIG[CUR], cf = state.conf; state.conf = 0.25;
     const lb0 = LB.slice(), ub0 = UB.slice();
     K.forEach((k, i) => {
       if (k === "cash" || k === "bund") { LB[i] = 0; UB[i] = 0.7; }
@@ -38,7 +38,7 @@
     state.conf = cf;
     return { strat: wS, total: applyTilt(wS) };
   }
-  const REFVOL = Math.sqrt(quad(SIG.pos, wRef));
+  const REFVOL = Math.sqrt(quad(SIG[CUR], wRef));
   const MODEL = modelWeights(REFVOL);
   // stance per asset class: total active weight relative to the band
   const stance = (k) => (MODEL.total[idx[k]] - wRef[idx[k]]) / 0.08;
@@ -60,8 +60,8 @@
       (prem < 0.025 ? Mi : P).push(`Erwartete Rendite ${pct(state.exp[idx[k]])} p. a. über zehn Jahre, ${num(prem * 100, 1)} Prozentpunkte über Geldmarkt.`);
       const ad = A[idx[k]].detail;
       if (k === "eq_us") { Mi.push("Dollarrisiko: Kursgewinne können durch einen stärkeren Euro aufgezehrt werden."); P.push(`Aktienrückkäufe stützen die Ausschüttung (netto etwa ${pct(ad.net_buyback)} p. a.).`); }
-      if (k === "eq_eu") { P.push(`Dividendenrendite ${pct(ad.dy)}, deutlich über den USA. Kein Währungsrisiko.`); if (state.exp[idx.eq_eu] > state.exp[idx.eq_us]) P.push(`Günstiger als die USA: erwartete Rendite ${pct(state.exp[idx.eq_eu])} gegenüber ${pct(state.exp[idx.eq_us])}.`); }
-      if (k === "eq_em") { Mi.push("Taiwan und Südkorea machen fast die Hälfte des Index aus. Ihre hohe Bewertung treibt den Durchschnitt."); Mi.push(`Verwässerung durch Kapitalerhöhungen kostet etwa ${pct(Math.abs(ad.net_buyback))} p. a.`); P.push(`Höchstes reales Wirtschaftswachstum (etwa ${pct(ad.g_real)}).`); }
+      if (k === "eq_eu") { const dus = A[idx.eq_us].detail.dy; P.push(ad.dy > dus + 0.005 ? `Dividendenrendite ${pct(ad.dy)}, deutlich über den USA (${pct(dus)}).` : `Dividendenrendite ${pct(ad.dy)}.`); P.push("Überwiegend Euro, dazu Pfund, Franken und skandinavische Kronen. Weniger Währungsrisiko als bei US-Aktien."); if (state.exp[idx.eq_eu] > state.exp[idx.eq_us]) P.push(`Günstiger als die USA: erwartete Rendite ${pct(state.exp[idx.eq_eu])} gegenüber ${pct(state.exp[idx.eq_us])}.`); }
+      if (k === "eq_em") { const tc = ad.top_countries; if (tc && tc.length > 1) Mi.push(`${tc[0][0]} und ${tc[1][0]} machen ${pct(tc[0][1] + tc[1][1], 0)} des Index aus. Ihre Bewertung bestimmt den Durchschnitt maßgeblich.`); Mi.push(`Verwässerung durch Kapitalerhöhungen kostet etwa ${pct(Math.abs(ad.net_buyback))} p. a.`); P.push(`Höchstes reales Wirtschaftswachstum (etwa ${pct(ad.g_real)}).`); }
     }
     if (k === "bund") {
       P.push(`Startrendite ${pct(state.exp[idx.bund])} ist die beste Schätzung der Rendite über zehn Jahre. Kein Ausfallrisiko.`);
@@ -194,7 +194,7 @@
       const iv = (p.id === "stock" ? byId.stock.idio : byId[p.id].idio) || 0;
       idioVar += (p.share * iv) ** 2;
     });
-    const S = SIG.pos;
+    const S = SIG[CUR];
     const mU = metrics(wU, S);
     const volU = Math.sqrt(mU.vol * mU.vol + idioVar);
     const egU = mU.ea - volU * volU / 2;
@@ -228,7 +228,7 @@
     html += `<div class="stats">${stat(pct(egU), "Erwartete Rendite p. a., 10 Jahre", "Modell " + pct(mT.eg))}${stat(pct(volU), "Volatilität p. a.", "Modell " + pct(mT.vol))}${stat(num((egU - rf) / volU, 2), "Sharpe-Ratio", "Modell " + num((mT.eg - rf) / mT.vol, 2))}${stat(spct(mU.mdd), "Max. Drawdown 1990–2026", "Modell " + spct(mT.mdd))}${stat(spct(wsU.v), `Schlechteste Krise (${wsU.n})`, "Modell " + spct(wsT.v))}</div>`;
 
     // rebalancing table
-    html += `<div class="tablewrap"><table><caption>Umschichtung auf Ebene der Anlageklassen <span class="muted">Modellportfolio mit gleichem Marktrisiko, strategisch plus taktisch, höchstens ±10 Prozentpunkte je Anlageklasse vom Referenzportfolio, Korrelationen des Inflationsregimes</span></caption>
+    html += `<div class="tablewrap"><table><caption>Umschichtung auf Ebene der Anlageklassen <span class="muted">Modellportfolio mit gleichem Marktrisiko, strategisch plus taktisch, höchstens ±10 Prozentpunkte je Anlageklasse vom Referenzportfolio, Korrelationen des ${CUR === "pos" ? "Inflationsregimes" : "Wachstumsregimes"}</span></caption>
       <thead><tr><th>Anlageklasse</th><th>Ihr Depot</th><th>Modell</th><th>Differenz</th><th style="text-align:left">Vorschlag</th><th style="text-align:left">Signal</th></tr></thead><tbody>${K.map((k, i) => {
         const d = wT[i] - wU[i];
         const act = d > 0.03 ? "aufstocken" : d < -0.03 ? "reduzieren" : "halten";

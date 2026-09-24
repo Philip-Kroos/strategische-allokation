@@ -16,6 +16,21 @@
     return (/^0(,0+)?$/.test(t) ? "" : x > 0 ? "+" : x < 0 ? "−" : "") + t + " %";
   };
   const num = (x, d = 2) => minus(nf(d).format(x));
+  const valText = () => {
+    const r = (M.meta.anchors && M.meta.anchors.regions) || {};
+    const src = { siblis: "Siblis Research", msci: "MSCI-Factsheet", stichtag: "Ersatzwert" };
+    const parts = ["eq_us", "eq_eu", "eq_em"].filter((k) => r[k]).map((k) => {
+      const nm = { eq_us: "USA", eq_eu: "Europa", eq_em: "Schwellenländer" }[k];
+      return `${nm}: CAPE ${monthName(r[k].cape_month)} (${src[r[k].cape_source]}), Dividende ${monthName(r[k].dy_month)} (${src[r[k].dy_source]})`;
+    });
+    return "Bewertungen: CAPE je Land monatlich von Siblis Research, Dividendenrendite aus den monatlichen MSCI-Factsheets, Länderanteile aus den iShares-Fonds. Bis zur nächsten Veröffentlichung schreibt das Modell die Werte mit dem Kursindex fort, wobei der Gewinndurchschnitt im CAPE mit realem Wachstum plus Inflation mitwächst. Im Test mit US-Daten seit 1960 lag diese Fortschreibung nach zwölf Monaten im Median 2,6 % neben dem tatsächlichen CAPE. Fällt eine Quelle aus, gilt der letzte Wert und wird ebenso fortgeschrieben." + (parts.length ? ` Aktueller Stand: ${parts.join("; ")}.` : "");
+  };
+  const aggText = () => {
+    const d = (k) => (M.assets.find((a) => a.key === k) || {}).detail || {};
+    const eu = d("eq_eu").coverage, em = d("eq_em").coverage;
+    if (!eu && !em) return "Der Schwellenländer-CAPE ist aus Länderwerten aggregiert.";
+    return `Europa und Schwellenländer sind aus Länderwerten aggregiert, gewichtet mit den Indexanteilen über die Ertragsrendite (1/CAPE). Die erfassten Länder decken ${eu ? pct(eu, 0) : "–"} und ${em ? pct(em, 0) : "–"} des jeweiligen Index ab.`;
+  };
   const bridgeText = () => {
     const b = (M.meta && M.meta.equity_bridge) || {};
     const months = [...new Set(Object.values(b).flatMap((v) => v.months))].sort();
@@ -57,7 +72,9 @@
   const LB = K.map(() => 0);
   const UB = K.map(k => ({ cash: 0.40, bund: 0.60, credit: 0.30, eq_eu: 0.40, eq_us: 0.45, eq_em: 0.15, gold: 0.10 })[k]);
   const baseExp = A.map(a => a.expected);
-  const state = { vol: 0.08, regime: "pos", conf: 0.25, exp: baseExp.slice(), edit: false, w0: 1e7, wd: 0.03, h: 20 };
+  const REG = (M.meta && M.meta.regime) || { current: "pos", since: "2022-01" };
+  const CUR = REG.current;
+  const state = { vol: 0.08, regime: CUR, conf: 0.25, exp: baseExp.slice(), edit: false, w0: 1e7, wd: 0.03, h: 20 };
 
   const SIG = { all: M.cov.all, pos: M.cov.pos, neg: M.cov.neg };
   const REGIME_LABEL = { pos: "Inflationsregime", all: "Gesamtstichprobe", neg: "Wachstumsregime" };
@@ -519,11 +536,11 @@
       tb.appendChild(tr);
     });
     const th2 = document.querySelector("#tbl-hyp thead"), tb2 = document.querySelector("#tbl-hyp tbody");
-    th2.innerHTML = `<tr><th>Schock</th><th>Inflationsregime</th><th>Gesamt</th><th>Wachstumsregime</th><th>Referenz, Inflationsregime</th></tr>`;
+    th2.innerHTML = `<tr><th>Schock</th><th>Inflationsregime</th><th>Gesamt</th><th>Wachstumsregime</th><th>Referenz, ${CUR === "pos" ? "Inflationsregime" : "Wachstumsregime"}</th></tr>`;
     tb2.innerHTML = "";
     SCEN.forEach(sc => {
       const v = ["pos", "all", "neg"].map(r => scenario(w, SIG[r], sc.shocks).total);
-      const ref = scenario(wRef, SIG.pos, sc.shocks).total;
+      const ref = scenario(wRef, SIG[CUR], sc.shocks).total;
       const cls = (x) => x < 0 ? "neg" : "pos";
       const tr = document.createElement("tr");
       tr.innerHTML = `<td>${sc.name}</td>${v.map((x, j) => `<td class="${cls(x)}">${j === ["pos", "all", "neg"].indexOf(state.regime) ? "<b>" + spct(x) + "</b>" : spct(x)}</td>`).join("")}<td class="${cls(ref)}">${spct(ref)}</td>`;
@@ -543,7 +560,7 @@
         <li>Bundesanleihen: Monatsend-Rendite 10 J. der Bundesbank-Zinsstrukturkurve (Svensson) seit 1972. Die Rendite einer rollierenden 10-jährigen Parianleihe wird exakt aus Kupon und Kursänderung berechnet, nicht über eine Durationsnäherung.</li>
         <li>Unternehmensanleihen: iShares Core € Corp Bond (Bloomberg Euro Corporate Index) seit ${monthName(M.meta.credit_observed_from)}. Für die Zeit davor und für die Kovarianzschätzung dient die Projektion nach Stambaugh (1997).</li>
         <li>Geldmarkt: 3-Monats-Zins Deutschland (OECD via FRED), für die jüngsten Monate 3-Monats-Euribor der EZB. Gold: Monatsendkurs des COMEX-Futures (GC=F) ab ${monthName(M.meta.gold_eom_from)}, einzelne fehlende Monate aus Weltbank-Monatsdurchschnitten interpoliert. Davor nur Weltbank-Monatsdurchschnitte, die die Schwankung leicht glätten. Inflation: VPI Deutschland, ab 2025 HVPI.</li>
-        <li>Aktualisierung: Alle Reihen werden zweimal im Monat, am 6. und am 20., automatisch neu geladen und das Modell neu gerechnet. CAPE und Dividendenrenditen der Regionen stammen aus Stichtagswerten (CAPE ${monthName(M.meta.anchors.cape_month)}) und werden bis zur nächsten Pflege mit der Kursentwicklung fortgeschrieben.</li>
+        <li>Aktualisierung: Alle Reihen werden zweimal im Monat, am 6. und am 20., automatisch neu geladen und das Modell neu gerechnet. ${valText()}</li>
         <li>Stichprobe für Risiko und Stresstests: ${monthName(M.meta.sample[0])} bis ${monthName(M.meta.sample[1])}, ${M.cov.info.all.n_months} Monate.</li>
       </ul>
       <p>Kontrolle gegen investierbare ETFs in EUR: Die konstruierten Reihen laufen eng mit den Fonds. Die Indexreihen liegen ohne Kosten und Quellensteuern und mit breiterem Aktienuniversum etwas über den Fondsrenditen.</p>
@@ -560,7 +577,7 @@
         <tbody>${["eq_eu", "eq_us", "eq_em"].map(k => { const d = src(k); return `<tr><td>${name(k)}</td><td>${num(d.cape, 1)}</td><td>${num(d.cape_fair, 0)}</td><td>${pct(d.dy, 2)}</td><td>${spct(d.net_buyback, 1)}</td><td>${pct(d.g_real, 1)}</td><td>${spct(d.reprice, 1)}</td><td>${pct(d.m2_building_blocks_real, 1)}</td></tr>`; }).join("")}</tbody>
       </table></div>
       <p class="small sans ink2" style="margin-top:.6rem">Rückkäufe netto: in den USA etwa die Hälfte der Bruttorückkäufe von rund 1,8 % des Börsenwerts, in Europa ebenso. Schwellenländer verwässern durch Neuemissionen, daher negativ. Wachstum: reales Potenzialwachstum der Region. Fairer CAPE der USA: Median seit 1950 (20,9).</p>
-      <p>Der Schwellenländer-CAPE ist aus Länderwerten aggregiert und deckt 80 % des Index ab. Zusammen mit der Verwässerungsannahme ist er die unsicherste Eingabe des Modells.</p>
+      <p>${aggText()} Der Schwellenländer-CAPE ist zusammen mit der Verwässerungsannahme die unsicherste Eingabe des Modells.</p>
       <p>Für Bundesanleihen erklärt die Startrendite ${num(b.r2 * 100, 0)} % der Streuung der Folgerenditen (${b.sample[0].slice(0, 4)} bis ${b.sample[1].slice(0, 4)}, Steigung ${num(b.slope, 2)}). Der mittlere absolute Fehler beträgt ${num(b.mae * 100, 1)} Prozentpunkte. Gold liegt real auf dem ${num(g.percentile * 100, 0)}. Perzentil seit 1975, beim ${num(g.ratio_to_median, 1)}-fachen des Medians. Das begründet die leicht negative reale Annahme.</p>
       <h3>Risiko und Portfoliokonstruktion</h3>
       <p>Kovarianzen stammen aus Monatsrenditen in EUR mit Ledoit-Wolf-Schrumpfung zur konstanten Korrelation. Die Regime entstehen aus dem Vorzeichen der rollierenden 36-Monats-Korrelation zwischen Aktien Europa und Bundesanleihen. Erwartete arithmetische Renditen ergeben sich aus den geometrischen Annahmen plus halber Varianz. Der Anker ist ein Referenzportfolio aus 53 % Aktien (22 % Europa, 23 % USA, 8 % Schwellenländer), 35 % Anleihen, 5 % Geldmarkt und 7 % Gold. Seine implizierten Gleichgewichtsrenditen werden mit den Kapitalmarktannahmen gemischt. Die Optimierung löst das quadratische Problem mit Obergrenzen je Klasse und ohne Leerverkäufe. Ausgewiesene erwartete Renditen stammen immer aus den Kapitalmarktannahmen, nicht aus der Mischung.</p>
@@ -591,7 +608,7 @@
     document.getElementById("out-conf").textContent = nf(0).format(state.conf * 100) + " %";
     const eqShare = w[idx.eq_eu] + w[idx.eq_us] + w[idx.eq_em];
     document.getElementById("hint-vol").textContent = `Aktienquote ${pct(eqShare, 0)}. ` + (sol.bound === "max" ? "Obergrenzen erlauben kein höheres Risiko." : sol.bound === "min" ? "Niedrigeres Risiko ist mit den Grenzen nicht erreichbar." : "Referenzportfolio: " + pct(mr.vol, 1) + ".");
-    document.getElementById("hint-regime").textContent = `${REGIME_LABEL[state.regime]}: Korrelation Aktien zu Bunds ${num(corrOf(state.regime, "eq_eu", "bund"), 2)}. ${state.regime === "pos" ? "Entspricht der aktuellen Lage." : ""}`;
+    document.getElementById("hint-regime").textContent = `${REGIME_LABEL[state.regime]}: Korrelation Aktien zu Bunds ${num(corrOf(state.regime, "eq_eu", "bund"), 2)}. ${state.regime === CUR ? "Entspricht der aktuellen Lage." : ""}`;
     const stat = (v, k, sub) => `<div class="stat"><div class="v">${v}${sub ? `<small>${sub}</small>` : ""}</div><div class="k">${k}</div></div>`;
     document.getElementById("pf-stats").innerHTML =
       stat(pct(mt.eg), "Erwartete Rendite p. a., nominal", "Ref. " + pct(mr.eg)) +
@@ -646,6 +663,17 @@
   const on = (id, ev, fn) => document.getElementById(id).addEventListener(ev, fn);
   on("in-vol", "input", (e) => { state.vol = +e.target.value / 100; renderPortfolio(); });
   on("in-conf", "input", (e) => { state.conf = +e.target.value / 100; renderPortfolio(); });
+  document.querySelectorAll("#seg-regime button").forEach(x => x.setAttribute("aria-pressed", x.dataset.v === CUR ? "true" : "false"));
+  {
+    const y = REG.since.slice(0, 4);
+    const sum = document.getElementById("regime-sum"), hist = document.getElementById("regime-hist");
+    if (sum) sum.textContent = CUR === "pos"
+      ? `Seit ${y} bewegen sich zudem Aktien und Bundesanleihen gleichgerichtet, Anleihen sichern also schlechter ab.`
+      : `Aktien und Bundesanleihen bewegen sich seit ${monthName(REG.since)} wieder gegenläufig, Anleihen sichern also wieder ab.`;
+    if (hist) hist.textContent = CUR === "pos"
+      ? `So war es in den 1990er Jahren und wieder seit ${y}.`
+      : `So war es in den 1990er Jahren und ab 2022. Seit ${monthName(REG.since)} ist die Korrelation wieder negativ.`;
+  }
   document.querySelectorAll("#seg-regime button").forEach(b => b.addEventListener("click", () => {
     state.regime = b.dataset.v;
     document.querySelectorAll("#seg-regime button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));

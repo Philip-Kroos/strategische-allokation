@@ -183,7 +183,7 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
     <div class="prose">
       <div class="label">Kurzfassung</div>
       <p>Das Modell beantwortet eine praktische Frage: Passt ein Depot zur aktuellen Marktlage, und wo lohnt eine Umschichtung? Es bewertet sieben Anlageklassen nach Bewertung und Trend, leitet daraus Über- und Untergewichtungen ab und prüft ein eingegebenes Depot gegen ein Modellportfolio mit gleichem Risiko.</p>
-      <p>Die Grundlage sind erwartete Renditen über zehn Jahre aus Bewertungen und Startrenditen. Sie fallen nach über einem Jahrzehnt hoher Aktienrenditen bescheiden aus. Seit 2022 bewegen sich zudem Aktien und Bundesanleihen wieder gleichgerichtet, Anleihen sichern also schlechter ab. Beides fließt in die Einschätzung ein.</p>
+      <p>Die Grundlage sind erwartete Renditen über zehn Jahre aus Bewertungen und Startrenditen. Sie fallen nach über einem Jahrzehnt hoher Aktienrenditen bescheiden aus. <span id="regime-sum">Seit 2022 bewegen sich zudem Aktien und Bundesanleihen gleichgerichtet, Anleihen sichern also schlechter ab.</span> Beides fließt in die Einschätzung ein.</p>
       <p class="small sans ink2">Alle Eingaben, Annahmen und Szenarien sind veränderbar. Die Rechnung läuft vollständig im Browser, es werden keine Daten übertragen.</p>
     </div>
     <div>
@@ -298,7 +298,7 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
   <section id="regime">
     <div class="sec-head"><h2><span class="no">5</span>Das Korrelationsregime</h2></div>
     <div class="prose">
-      <p>Die Absicherungswirkung von Staatsanleihen ist kein Naturgesetz. Sie hängt davon ab, ob Wachstums- oder Inflationsschocks die Märkte treiben. Bei Wachstumsschocks fallen Aktien und Zinsen gemeinsam, Anleihen steigen. Bei Inflationsschocks steigen die Zinsen, und beide Anlageklassen verlieren. So war es in den 1990er Jahren und wieder seit 2022.</p>
+      <p>Die Absicherungswirkung von Staatsanleihen ist kein Naturgesetz. Sie hängt davon ab, ob Wachstums- oder Inflationsschocks die Märkte treiben. Bei Wachstumsschocks fallen Aktien und Zinsen gemeinsam, Anleihen steigen. Bei Inflationsschocks steigen die Zinsen, und beide Anlageklassen verlieren. <span id="regime-hist">So war es in den 1990er Jahren und wieder seit 2022.</span></p>
       <p>Das Modell teilt die Stichprobe am Vorzeichen der rollierenden 36-Monats-Korrelation und schätzt für beide Regime eigene Kovarianzmatrizen. Der Regler im nächsten Abschnitt wählt, mit welcher gerechnet wird.</p>
     </div>
     <figure>
@@ -397,7 +397,7 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
   </section>
 
   <div class="foot">
-    <span>Philip Kroos · Daten: Deutsche Bundesbank, EZB, FRED, Kenneth R. French Data Library, Robert Shiller, Weltbank, Börsenkurse. Keine Anlageberatung.</span>
+    <span>Philip Kroos · Daten: Deutsche Bundesbank, EZB, FRED, Kenneth R. French Data Library, Robert Shiller, MSCI, Siblis Research, Weltbank, Börsenkurse. Keine Anlageberatung.</span>
     <span id="foot-build"></span>
   </div>
 </div>
