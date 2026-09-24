@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # feste Version: neue Images haben anfangs oft kein vorgebautes Python
     steps:
       - uses: actions/checkout@v5
 
