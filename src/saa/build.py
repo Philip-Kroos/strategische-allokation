@@ -224,6 +224,8 @@ def main() -> None:
             "sample": [rets.index[0].strftime("%Y-%m"), rets.index[-1].strftime("%Y-%m")],
             "inflation": inputs["inflation_eur"],
             "credit_observed_from": credit_obs.index[0].strftime("%Y-%m"),
+            "equity_bridge": {k: {**v, "months": [m for m in v["months"] if m <= rets.index[-1].strftime("%Y-%m")]}
+                              for k, v in meta.get("equity_bridge", {}).items()},
             "credit_backfill": bf,
             "gold_eom_from": R.monthly_returns(R.yahoo_monthly("GC=F")).index[0].strftime("%Y-%m"),
             "bund_mod_duration": r4(mod_dur, 2),

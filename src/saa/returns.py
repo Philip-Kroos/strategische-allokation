@@ -32,6 +32,9 @@ ASSETS = [
 ]
 
 
+BRIDGE = {"eq_eu": ["EXSA.DE"], "eq_us": ["SXR8.DE"], "eq_em": ["IEMM.AS", "EEM"]}
+
+
 def _me(idx) -> pd.DatetimeIndex:
     return pd.DatetimeIndex(idx) + pd.offsets.MonthEnd(0)
 
@@ -189,8 +192,31 @@ def build_returns() -> tuple[pd.DataFrame, dict]:
 
     credit_obs = monthly_returns(yahoo_monthly("IEAC.L")).rename("credit")
 
+    # The French library publishes with a lag of one to two months. Until it
+    # catches up, the missing months come from EUR-listed index ETFs
+    # (monthly correlation with the index series 0.97 to 0.99 since 2012).
+    # Next month the index data replace the bridge.
+    bridge = {}
+    eq = {"eq_eu": eq_eu, "eq_us": eq_us, "eq_em": eq_em}
+    for k, tickers in BRIDGE.items():
+        for t in tickers:
+            try:
+                p = monthly_returns(yahoo_monthly(t))
+            except (FileNotFoundError, KeyError, IndexError):
+                continue
+            if p.empty:
+                continue
+            if t == "EEM":
+                p = to_eur(p, fx)
+            new = p[p.index > eq[k].index[-1]]
+            if len(new):
+                eq[k] = pd.concat([eq[k], new.rename(k)])
+                bridge[k] = {"ticker": t, "months": [d.strftime("%Y-%m") for d in new.index]}
+            break
+    eq_eu, eq_us, eq_em = eq["eq_eu"], eq["eq_us"], eq["eq_em"]
+
     df = pd.concat([cash, bund, credit_obs, eq_eu, eq_us, eq_em, gold], axis=1)
-    meta = {"credit_observed_from": credit_obs.index[0].strftime("%Y-%m")}
+    meta = {"credit_observed_from": credit_obs.index[0].strftime("%Y-%m"), "equity_bridge": bridge}
     return df, meta
 
 
