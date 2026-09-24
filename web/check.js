@@ -40,8 +40,61 @@
   }
   const REFVOL = Math.sqrt(quad(SIG[CUR], wRef));
   const MODEL = modelWeights(REFVOL);
+  window.SAA_MODEL = { keys: K, strat: MODEL.strat, total: MODEL.total, ref: wRef, vol: REFVOL };
   // stance per asset class: total active weight relative to the band
   const stance = (k) => (MODEL.total[idx[k]] - wRef[idx[k]]) / 0.08;
+
+  // hedging the dollar share of the reference portfolio
+  function drawCurrency() {
+    const C = M.currency;
+    if (!C) return;
+    const R0 = C.rows[0], R1 = C.rows[C.rows.length - 1];
+    const lab = (h) => h === 0 ? "Ungesichert" : h === 1 ? "Voll gesichert" : `${pct(h, 0)} gesichert`;
+    document.querySelector("#tbl-fx thead").innerHTML = `<tr><th></th>${C.rows.map((r) => `<th>${lab(r.hedge)}</th>`).join("")}</tr>`;
+    const row = (l, f, cls) => `<tr><td>${l}</td>${C.rows.map((r) => `<td${cls ? ` class="${cls(f(r))}"` : ""}>${typeof f(r) === "number" ? spct(f(r)) : f(r)}</td>`).join("")}</tr>`;
+    const neg = (x) => x < 0 ? "neg" : "pos";
+    const eps = Object.keys(R0.episodes);
+    document.querySelector("#tbl-fx tbody").innerHTML =
+      row("Erwartete Rendite p. a., 10 Jahre", (r) => pct(r.expected)) +
+      row(`Rendite p. a. ${M.meta.sample[0].slice(0, 4)} bis ${M.meta.sample[1].slice(0, 4)}`, (r) => pct(r.hist)) +
+      row("Volatilität p. a.", (r) => pct(r.vol)) +
+      row("Max. Drawdown", (r) => r.mdd, neg) +
+      eps.map((e) => row(e, (r) => r.episodes[e], neg)).join("");
+    const worse = eps.filter((e) => R1.episodes[e] < R0.episodes[e]);
+    const better = eps.filter((e) => R1.episodes[e] > R0.episodes[e]);
+    let t = `Ein Euro-Anleger trägt bei US-Aktien und Gold das Dollarrisiko. Im Referenzportfolio sind das ${pct(C.usd_share, 0)}. Die Absicherung kostet heute die Zinsdifferenz: ${pct(C.bill_now)} für Dollar-Geldmarkt gegen ${pct(M.assets[idx.cash].detail.current)} für €STR, also ${pct(C.carry_now)} p. a. auf den gesicherten Teil. Über zehn Jahre setzt das Modell die Differenz der Zehnjahresrenditen an, ${pct(C.carry_10y)} p. a.`;
+    const IN = { "Dotcom-Crash": "im Dotcom-Crash", "Finanzkrise": "in der Finanzkrise", "Zinswende": "in der Zinswende 2022" };
+    const lst = (xs) => xs.map((e) => IN[e] || e).join(" und ");
+    if (worse.length) { const w = lst(worse); t += ` Historisch hat der Dollar in Krisen oft stabilisiert: ${w.charAt(0).toUpperCase() + w.slice(1)} lag das voll gesicherte Portfolio schlechter.`; }
+    if (better.length) t += ` Nur ${lst(better)} lief es gesichert besser.`;
+    t += R1.expected < R0.expected - 0.001 && R1.vol > R0.vol - 0.005
+      ? " Das Modell sichert deshalb nicht ab: Die Absicherung kostet Rendite und senkt die Schwankung kaum."
+      : R1.expected < R0.expected - 0.001 ? ` Die Absicherung senkt die Schwankung um ${num((R0.vol - R1.vol) * 100, 1)} Prozentpunkte und kostet ${num((R0.expected - R1.expected) * 100, 1)} Prozentpunkte Rendite.` : "";
+    document.getElementById("fx-text").textContent = t;
+    document.getElementById("fx-note").textContent = `Gesicherte Monatsrendite = Dollarrendite plus Differenz der Geldmarktsätze (Euro minus Dollar). Zinsen: 3-Monats-T-Bills und Rendite 10-jähriger US-Staatsanleihen, zuletzt ${C.sources.join(" bzw. ")}. Die Korrelation zwischen Dollar und europäischen Aktien liegt bei ${num(C.corr_usd_equity, 2)}.`;
+  }
+
+  // live record of past positioning (data/track/positionen.csv)
+  function drawTrack() {
+    const el = document.getElementById("track-out");
+    let T = {};
+    try { T = JSON.parse(document.getElementById("track").textContent || "{}"); } catch (e) { T = {}; }
+    const P = T.positions || [], Mo = T.months || [];
+    if (!P.length) { el.innerHTML = `<p class="note">Das Protokoll beginnt mit dem nächsten automatischen Lauf.</p>`; return; }
+    const d = (s) => new Date(s).toLocaleDateString("de-DE");
+    let html = "";
+    if (Mo.length) {
+      const cm = Mo.reduce((v, m) => v * (1 + m[1]), 1) - 1, cr = Mo.reduce((v, m) => v * (1 + m[2]), 1) - 1;
+      const hit = Mo.filter((m) => m[1] > m[2]).length;
+      html += `<div class="stats" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="stat"><div class="v">${spct(cm)}</div><div class="k">Modell seit ${monthName(Mo[0][0])}</div></div><div class="stat"><div class="v">${spct(cr)}</div><div class="k">Referenzportfolio</div></div><div class="stat"><div class="v">${spct(cm - cr)}</div><div class="k">Differenz, ${hit} von ${Mo.length} Monaten besser</div></div></div>`;
+      html += `<div class="tablewrap"><table><caption>Wertentwicklung je Monat <span class="muted">in EUR, vor Kosten</span></caption><thead><tr><th>Monat</th><th>Modell</th><th>Referenz</th><th>Differenz</th></tr></thead><tbody>${Mo.slice().reverse().slice(0, 12).map((m) => `<tr><td>${monthName(m[0])}</td><td>${spct(m[1])}</td><td>${spct(m[2])}</td><td class="${Math.abs(m[1] - m[2]) < 0.0005 ? "" : m[1] > m[2] ? "pos" : "neg"}">${spct(m[1] - m[2])}</td></tr>`).join("")}</tbody></table></div>`;
+    } else {
+      html += `<p class="note">Protokoll seit ${d(T.start)}. Die erste Position gilt ab ${monthName(P[0].applies)}. Die Wertentwicklung erscheint hier, sobald dieser Monat abgeschlossen ist.</p>`;
+    }
+    const cols = ["bund", "credit", "eq_eu", "eq_us", "eq_em", "gold", "cash"];
+    html += `<div class="tablewrap"><table><caption>Gespeicherte Positionen <span class="muted">Modellportfolio mit Trend, Referenzrisiko</span></caption><thead><tr><th>Entschieden</th><th>Gilt für</th>${cols.map((k) => `<th>${A[idx[k]].name.replace(" 10 J.", "").replace("Unternehmensanleihen EUR (IG)", "Unternehmensanl.").replace("Aktien ", "")}</th>`).join("")}</tr></thead><tbody>${P.slice().reverse().slice(0, 12).map((p) => `<tr><td>${d(p.decided)}</td><td>${monthName(p.applies)}</td>${cols.map((k) => `<td>${pct(p.model[k], 0)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    el.innerHTML = html;
+  }
 
   // plus / minus points per asset class, formulated from the data
   function classPoints(k) {
@@ -107,7 +160,22 @@
     document.getElementById("bt-note").innerHTML = `Mehrrendite <b>${spct(bt.excess_pa)}</b> p. a. bei einem Tracking Error von ${pct(bt.te)}, Information Ratio ${num(bt.ir, 2)}, t-Wert ${num(bt.t_stat, 1)}. In ${nf(0).format(bt.hit_years * 100)} % der Jahre besser als die Referenz. Umschlag ${pct(bt.turnover_pa, 0)} p. a., Kosten ${nf(1).format(bt.cost * 1e4)} Basispunkte je Umschichtung. Signale jeweils mit Daten des Vormonats.`;
     const V = SGN.variants, vr = (l, v) => `<tr><td>${l}</td><td class="${v.excess_pa < 0 ? "neg" : "pos"}">${spct(v.excess_pa)}</td><td>${num(v.ir, 2).replace("-", "−")}</td><td>${num(v.t_stat, 1).replace("-", "−")}</td></tr>`;
     document.querySelector("#tbl-var tbody").innerHTML = vr("Trend", V.trend) + vr("Bewertung", V.bewertung) + vr("Beide je zur Hälfte", V.kombiniert);
+    const RB = SGN.robustness || [];
+    const halves = (rb) => {
+      const a = rb[rb.length - 2], b = rb[rb.length - 1];
+      if (!a || !b) return "";
+      if (b.excess_pa <= 0) return "In der zweiten Hälfte der Stichprobe verschwindet der Effekt.";
+      if (b.excess_pa < 0.7 * a.excess_pa) return "In der zweiten Hälfte der Stichprobe ist der Effekt kleiner, aber vorhanden.";
+      return "Beide Hälften der Stichprobe zeigen einen ähnlichen Effekt.";
+    };
+    document.querySelector("#tbl-rob tbody").innerHTML = RB.map((v, i) => `<tr${i === 0 ? ' style="font-weight:600"' : ""}><td>${v.label}</td><td class="${v.excess_pa < 0 ? "neg" : "pos"}">${spct(v.excess_pa)}</td><td>${num(v.ir, 2)}</td><td>${num(v.t_stat, 1)}</td><td>${pct(v.hit_years, 0)}</td></tr>`).join("");
+    if (RB.length) {
+      const pos = RB.filter((v) => v.excess_pa > 0).length, ts = RB.map((v) => v.t_stat);
+      document.getElementById("rob-note").textContent = `Die Mehrrendite ist in ${pos} von ${RB.length} Varianten positiv, die t-Werte liegen zwischen ${num(Math.min(...ts), 1)} und ${num(Math.max(...ts), 1)}. Der Zwölfmonatszeitraum ist der übliche Standard und wurde nicht auf diese Daten optimiert. ${halves(RB)}`;
+    }
     drawBacktest();
+    drawTrack();
+    drawCurrency();
   }
   function drawBacktest() {
     const P = SGN.backtest.path;

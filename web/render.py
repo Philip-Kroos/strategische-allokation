@@ -12,7 +12,9 @@ app = (ROOT / "web" / "app.js").read_text()
 check = (ROOT / "web" / "check.js").read_text()
 marker = "  // portfolio check and tactical signals (web/check.js is inserted here)"
 app = app.replace(marker, marker + "\n" + check)
-body = tpl.replace("__MODEL__", model).replace("__APP__", app)
+track_file = ROOT / "docs" / "data" / "track.json"
+track = track_file.read_text().replace("</", "<\\/") if track_file.exists() else "{}"
+body = tpl.replace("__MODEL__", model).replace("__TRACK__", track).replace("__APP__", app)
 import json as _json
 _m = _json.loads((ROOT / "docs" / "data" / "model.json").read_text())
 body = body.replace("1990–2026", f"{_m['meta']['sample'][0][:4]}–{_m['meta']['sample'][1][:4]}")

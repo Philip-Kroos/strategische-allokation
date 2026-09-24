@@ -25,6 +25,17 @@
     });
     return "Bewertungen: CAPE je Land monatlich von Siblis Research, Dividendenrendite aus den monatlichen MSCI-Factsheets, Länderanteile aus den iShares-Fonds. Bis zur nächsten Veröffentlichung schreibt das Modell die Werte mit dem Kursindex fort, wobei der Gewinndurchschnitt im CAPE mit realem Wachstum plus Inflation mitwächst. Im Test mit US-Daten seit 1960 lag diese Fortschreibung nach zwölf Monaten im Median 2,6 % neben dem tatsächlichen CAPE. Fällt eine Quelle aus, gilt der letzte Wert und wird ebenso fortgeschrieben." + (parts.length ? ` Aktueller Stand: ${parts.join("; ")}.` : "");
   };
+  const statusText = () => {
+    const st = M.meta.status || {};
+    if (!st.fetched) return "keine Angaben.";
+    const names = { FRED: "FRED (ersetzt durch Euribor und HVPI der EZB)", Yahoo: "Kursdaten", iShares: "iShares", Siblis: "Siblis Research", MSCI: "MSCI-Factsheets", "Länderanteile": "Länderanteile", EZB: "EZB", Bundesbank: "Bundesbank", French: "French Data Library", "Shiller/Gold": "Shiller- und Golddaten" };
+    let t = `Letzter Lauf ${new Date(st.fetched).toLocaleDateString("de-DE")}, ${st.sources_ok} von ${st.sources} Quellen aktuell.`;
+    const fl = (st.failed || []).filter((f) => f !== "FRED");
+    if ((st.failed || []).includes("FRED")) t += " FRED antwortet GitHub nicht, die jüngsten Monate für Geldmarkt und Inflation kommen von der EZB.";
+    if (fl.length) t += ` Nicht erreichbar: ${fl.map((f) => names[f] || f).join(", ")}; dafür gilt der letzte Stand, mit Kursen fortgeschrieben.`;
+    t += st.checks && st.checks.length ? ` Plausibilitätsprüfung: ${st.checks.join(" ")}` : " Plausibilitätsprüfung ohne Auffälligkeiten: Sprünge bei Bewertungen, die nicht zur Kursentwicklung passen, und unplausible Monatsrenditen werden abgefangen.";
+    return t;
+  };
   const aggText = () => {
     const d = (k) => (M.assets.find((a) => a.key === k) || {}).detail || {};
     const eu = d("eq_eu").coverage, em = d("eq_em").coverage;
@@ -561,6 +572,7 @@
         <li>Unternehmensanleihen: iShares Core € Corp Bond (Bloomberg Euro Corporate Index) seit ${monthName(M.meta.credit_observed_from)}. Für die Zeit davor und für die Kovarianzschätzung dient die Projektion nach Stambaugh (1997).</li>
         <li>Geldmarkt: 3-Monats-Zins Deutschland (OECD via FRED), für die jüngsten Monate 3-Monats-Euribor der EZB. Gold: Monatsendkurs des COMEX-Futures (GC=F) ab ${monthName(M.meta.gold_eom_from)}, einzelne fehlende Monate aus Weltbank-Monatsdurchschnitten interpoliert. Davor nur Weltbank-Monatsdurchschnitte, die die Schwankung leicht glätten. Inflation: VPI Deutschland, ab 2025 HVPI.</li>
         <li>Aktualisierung: Alle Reihen werden zweimal im Monat, am 6. und am 20., automatisch neu geladen und das Modell neu gerechnet. ${valText()}</li>
+        <li>Datenstatus: ${statusText()}</li>
         <li>Stichprobe für Risiko und Stresstests: ${monthName(M.meta.sample[0])} bis ${monthName(M.meta.sample[1])}, ${M.cov.info.all.n_months} Monate.</li>
       </ul>
       <p>Kontrolle gegen investierbare ETFs in EUR: Die konstruierten Reihen laufen eng mit den Fonds. Die Indexreihen liegen ohne Kosten und Quellensteuern und mit breiterem Aktienuniversum etwas über den Fondsrenditen.</p>
@@ -592,7 +604,7 @@
         <li>Die Regime sind am Ergebnis selbst abgegrenzt (Vorzeichen der Korrelation). Das beschreibt vergangene Phasen gut, sagt aber nicht voraus, wann ein Regimewechsel kommt.</li>
         <li>Normalverteilte Renditen unterschätzen extreme Verluste. Die historischen Stresstests ergänzen die Kennzahlen deshalb.</li>
         <li>Illiquide Anlagen, die in Family Offices großes Gewicht haben (Private Equity, direkte Immobilien), fehlen mangels verlässlicher öffentlicher Daten.</li>
-        <li>Steuern, Währungsabsicherung und Rebalancing-Kosten sind nicht modelliert. Die Projektion zieht pauschal 0,5 % Kosten p. a. ab.</li>
+        <li>Steuern und Rebalancing-Kosten sind nicht modelliert, die Währungsabsicherung nur für das Referenzportfolio (Tabelle 6). Die Projektion zieht pauschal 0,5 % Kosten p. a. ab.</li>
       </ul>`;
   }
 

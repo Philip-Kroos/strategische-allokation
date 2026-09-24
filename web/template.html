@@ -248,6 +248,17 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
         <tbody></tbody>
       </table>
     </div>
+    <div class="tablewrap">
+      <table id="tbl-rob">
+        <caption>Tabelle 2c <span class="muted">Wie robust ist das Trendsignal? Mehrrendite gegenüber der Referenz nach Kosten, Varianten des Tests</span></caption>
+        <thead><tr><th>Variante</th><th>p. a.</th><th>Information Ratio</th><th>t-Wert</th><th>Jahre besser</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note" id="rob-note"></p>
+    <h3 style="margin-top:2rem">Protokoll</h3>
+    <div class="prose"><p>Ein Backtest lässt sich im Nachhinein schönrechnen, ein Protokoll nicht. Bei jedem automatischen Lauf in einem neuen Monat speichert das Modell seine Positionierung mit Datum im Repository. Sie gilt ab dem Folgemonat und wird danach nicht mehr verändert.</p></div>
+    <div id="track-out"></div>
   </section>
 
   <!-- 1 -->
@@ -388,6 +399,15 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
       </table>
     </div>
     <p class="note" id="stress-note"></p>
+    <h3 style="margin-top:2rem">Dollar absichern?</h3>
+    <div class="prose"><p id="fx-text"></p></div>
+    <div class="tablewrap">
+      <table id="tbl-fx">
+        <caption>Tabelle 6 <span class="muted">Referenzportfolio mit ungesichertem, halb und ganz gesichertem Dollaranteil (US-Aktien und Gold)</span></caption>
+        <thead></thead><tbody></tbody>
+      </table>
+    </div>
+    <p class="note" id="fx-note"></p>
   </section>
 
   <!-- 7 -->
@@ -404,6 +424,7 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
 <div id="tip" role="status" aria-live="polite"></div>
 
 <script id="model" type="application/json">__MODEL__</script>
+<script id="track" type="application/json">__TRACK__</script>
 <script>
 __APP__
 </script>
