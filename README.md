@@ -1,5 +1,7 @@
 # Strategische Allokation für den Euro-Anleger
 
+[![Datenupdate](https://github.com/Philip-Kroos/strategische-allokation/actions/workflows/monatsupdate.yml/badge.svg)](https://github.com/Philip-Kroos/strategische-allokation/actions/workflows/monatsupdate.yml)
+
 Ein Arbeitsmodell für die strategische und taktische Asset-Allokation aus Sicht eines Euro-Anlegers.
 Kern ist ein Portfolio-Check: Depot eingeben, Fonds werden in Regionen zerlegt, jede Position erhält
 Plus- und Minuspunkte aus Bewertung und Trend, und das Depot wird mit einem Modellportfolio gleichen
@@ -34,7 +36,9 @@ src/saa/                  Python: Renditereihen, Anleihenmathematik, Bewertung, 
 web/template.html, app.js, check.js  Oberfläche und Browser-Rechnung (Optimierung, Portfolio-Check, Monte Carlo, Szenarien)
 docs/index.html           Fertige Seite für GitHub Pages (Daten eingebettet)
 docs/data/model.json      Modelloutput
-paper/                    Arbeitspapier: build_paper.py erzeugt paper.html, daraus das PDF
+paper/                    Arbeitspapier: build_paper.py erzeugt paper.html, make_pdf.py das PDF
+data/derived/             Übernommene Bewertungen je Region (Ersatz und Vergleichswert für den nächsten Lauf)
+data/track/               Protokoll der Positionierung
 ```
 
 ## Neu rechnen
@@ -66,7 +70,19 @@ für Europa und Schwellenländer aus den iShares-Fonds (IEUR, EEM). Bis zur näc
 schreibt das Modell die Werte mit dem Kursindex fort. Im Test mit US-Daten seit 1960 lag diese
 Fortschreibung nach zwölf Monaten im Median 2,6 % neben dem tatsächlichen CAPE. Fällt eine Quelle aus,
 gilt der letzte Wert und wird ebenso fortgeschrieben; `config/inputs.json` enthält nur noch Ersatzwerte
-und Modellannahmen (fairer CAPE, Wachstum, Rückkäufe, Inflation).
+und Modellannahmen (fairer CAPE, Wachstum, Rückkäufe, Inflation). Die Rohwerte von MSCI, Siblis Research
+und iShares werden bei jedem Lauf neu geladen und nicht veröffentlicht; im Repository liegen nur die daraus
+berechneten Regionswerte (`data/derived/bewertungen.json`).
+
+Jeder Lauf prüft die Daten, bevor er veröffentlicht: Bewertungen, die nicht zur Kursentwicklung seit dem
+letzten Wert passen, werden verworfen, unplausible Monatsrenditen stoppen den Lauf. Die Seite behält dann
+ihren letzten Stand, und GitHub meldet den Fehler.
+
+## Protokoll
+
+Bei jedem Lauf in einem neuen Monat speichert das Modell seine Positionierung in `data/track/positionen.csv`.
+Sie gilt ab dem Folgemonat und wird danach nicht mehr verändert. Die Seite zeigt die Wertentwicklung dieses
+Protokolls gegenüber dem Referenzportfolio.
 
 Das Arbeitspapier (`docs/arbeitspapier.pdf`) wird bei jedem Lauf neu gesetzt: `paper/make_pdf.py` liest die
 Quoten aus der fertigen Seite, `paper/build_paper.py` schreibt den Text aus den Modellzahlen, auch die

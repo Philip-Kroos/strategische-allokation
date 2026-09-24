@@ -2,3 +2,9 @@ __pycache__/
 *.pyc
 .DS_Store
 build/
+
+# Rohwerte lizenzierter Quellen: werden bei jedem Lauf neu geladen, nur die
+# abgeleiteten Regionswerte (data/derived) werden veröffentlicht
+data/raw/siblis.csv
+data/raw/msci_fundamentals.json
+data/raw/country_weights.json
