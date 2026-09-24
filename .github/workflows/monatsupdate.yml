@@ -31,11 +31,17 @@ jobs:
           PYTHONPATH=src python -m saa.build
           python web/render.py
 
+      - name: Arbeitspapier als PDF setzen
+        continue-on-error: true   # ein Fehler hier soll das Datenupdate nicht aufhalten
+        run: |
+          python -m playwright install --with-deps chromium
+          python paper/make_pdf.py
+
       - name: Änderungen übernehmen
         run: |
           git config user.name "Philip Kroos"
           git config user.email "Philip-Kroos@users.noreply.github.com"
-          git add data/raw docs
+          git add data/raw docs paper
           if git diff --cached --quiet; then
             echo "Keine Änderungen."
           else
