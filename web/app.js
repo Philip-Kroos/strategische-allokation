@@ -8,9 +8,21 @@
 
   // ---------------------------------------------------------------- formatting
   const nf = (d) => new Intl.NumberFormat("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
-  const pct = (x, d = 1) => (x == null || isNaN(x)) ? "–" : nf(d).format(x * 100) + " %";
-  const spct = (x, d = 1) => (x > 0 ? "+" : x < 0 ? "−" : "") + nf(d).format(Math.abs(x * 100)) + " %";
-  const num = (x, d = 2) => nf(d).format(x);
+  // typographic minus; a value that rounds to zero carries no sign
+  const minus = (t) => { t = t.replace("-", "−"); return /^−0(,0+)?$/.test(t) ? t.slice(1) : t; };
+  const pct = (x, d = 1) => (x == null || isNaN(x)) ? "–" : minus(nf(d).format(x * 100)) + " %";
+  const spct = (x, d = 1) => {
+    const t = nf(d).format(Math.abs(x * 100));
+    return (/^0(,0+)?$/.test(t) ? "" : x > 0 ? "+" : x < 0 ? "−" : "") + t + " %";
+  };
+  const num = (x, d = 2) => minus(nf(d).format(x));
+  const bridgeText = () => {
+    const b = (M.meta && M.meta.equity_bridge) || {};
+    const months = [...new Set(Object.values(b).flatMap((v) => v.months))].sort();
+    if (!months.length) return "";
+    const list = months.map((m) => monthName(m)).join(" und ");
+    return ` Die French Data Library veröffentlicht mit ein bis zwei Monaten Verzug. ${list} ${months.length > 1 ? "sind" : "ist"} deshalb mit Renditen börsengehandelter Index-ETFs in EUR überbrückt (iShares STOXX Europe 600, Core S&amp;P 500, MSCI EM). Sobald die Indexdaten vorliegen, ersetzen sie die Überbrückung.`;
+  };
   const eur = (x) => {
     const a = Math.abs(x);
     if (a >= 1e6) return nf(1).format(x / 1e6) + " Mio. €";
@@ -527,11 +539,11 @@
     document.getElementById("method-body").innerHTML = `
       <h3>Daten</h3>
       <ul>
-        <li>Aktien: Marktrenditen des Kenneth R. French Data Library für USA (seit 1926), Europa (seit 1990) und Schwellenländer (seit 1989), in USD, umgerechnet mit EZB-Referenzkursen, vor 1999 D-Mark zum Kurs 1,95583.</li>
+        <li>Aktien: Marktrenditen des Kenneth R. French Data Library für USA (seit 1926), Europa (seit 1990) und Schwellenländer (seit 1989), in USD, umgerechnet mit EZB-Referenzkursen, vor 1999 D-Mark zum Kurs 1,95583.${bridgeText()}</li>
         <li>Bundesanleihen: Monatsend-Rendite 10 J. der Bundesbank-Zinsstrukturkurve (Svensson) seit 1972. Die Rendite einer rollierenden 10-jährigen Parianleihe wird exakt aus Kupon und Kursänderung berechnet, nicht über eine Durationsnäherung.</li>
         <li>Unternehmensanleihen: iShares Core € Corp Bond (Bloomberg Euro Corporate Index) seit ${monthName(M.meta.credit_observed_from)}. Für die Zeit davor und für die Kovarianzschätzung dient die Projektion nach Stambaugh (1997).</li>
-        <li>Geldmarkt: 3-Monats-Zins Deutschland bzw. Euribor (OECD via FRED). Gold: Monatsendkurs des COMEX-Futures (GC=F) ab ${monthName(M.meta.gold_eom_from)}, einzelne fehlende Monate aus Weltbank-Monatsdurchschnitten interpoliert. Davor nur Weltbank-Monatsdurchschnitte, die die Schwankung leicht glätten. Inflation: VPI Deutschland, ab 2025 HVPI.</li>
-        <li>Aktualisierung: Alle Reihen werden am Monatsanfang automatisch neu geladen und das Modell neu gerechnet. CAPE und Dividendenrenditen der Regionen stammen aus Stichtagswerten (CAPE ${monthName(M.meta.anchors.cape_month)}) und werden bis zur nächsten Pflege mit der Kursentwicklung fortgeschrieben.</li>
+        <li>Geldmarkt: 3-Monats-Zins Deutschland (OECD via FRED), für die jüngsten Monate 3-Monats-Euribor der EZB. Gold: Monatsendkurs des COMEX-Futures (GC=F) ab ${monthName(M.meta.gold_eom_from)}, einzelne fehlende Monate aus Weltbank-Monatsdurchschnitten interpoliert. Davor nur Weltbank-Monatsdurchschnitte, die die Schwankung leicht glätten. Inflation: VPI Deutschland, ab 2025 HVPI.</li>
+        <li>Aktualisierung: Alle Reihen werden zweimal im Monat, am 6. und am 20., automatisch neu geladen und das Modell neu gerechnet. CAPE und Dividendenrenditen der Regionen stammen aus Stichtagswerten (CAPE ${monthName(M.meta.anchors.cape_month)}) und werden bis zur nächsten Pflege mit der Kursentwicklung fortgeschrieben.</li>
         <li>Stichprobe für Risiko und Stresstests: ${monthName(M.meta.sample[0])} bis ${monthName(M.meta.sample[1])}, ${M.cov.info.all.n_months} Monate.</li>
       </ul>
       <p>Kontrolle gegen investierbare ETFs in EUR: Die konstruierten Reihen laufen eng mit den Fonds. Die Indexreihen liegen ohne Kosten und Quellensteuern und mit breiterem Aktienuniversum etwas über den Fondsrenditen.</p>

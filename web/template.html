@@ -152,7 +152,8 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
 .pc-verdict h3{font-family:var(--serif); font-size:1.2rem; margin-bottom:.5rem}
 .pos-list{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; margin-top:1.4rem}
 .pos-card{border:1px solid var(--rule); border-radius:6px; padding:.9rem 1rem 1rem; font-family:var(--sans); font-size:.86rem; background:var(--bg)}
-.pos-card .t{display:flex; justify-content:space-between; gap:.6rem; align-items:baseline; margin-bottom:.15rem}
+.pos-card .t{display:flex; flex-wrap:wrap; justify-content:space-between; gap:.3rem .6rem; align-items:baseline; margin-bottom:.15rem}
+.pos-card{min-width:0; overflow-wrap:break-word; hyphens:auto}
 .pos-card .t b{font-size:.95rem}
 .pos-card .sub{color:var(--muted); font-size:.76rem; margin-bottom:.55rem}
 .pos-card ul{list-style:none; padding:0; margin:.2rem 0 0}
@@ -167,7 +168,7 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
 .bar i{position:absolute; top:0; bottom:0; border-radius:2px}
 .bar::after{content:""; position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--muted)}
 .warn{border-left:2px solid var(--neg); padding-left:.8rem; margin-top:.8rem; font-family:var(--sans); font-size:.84rem; color:var(--ink2)}
-@media (max-width:860px){ .pos-list{grid-template-columns:1fr} .pc-head{display:none} .pc-row{grid-template-columns:1fr 5.5rem 2rem; row-gap:.35rem} .pc-row .det{grid-column:1 / -1; grid-row:2} }
+@media (max-width:860px){ .pos-list{grid-template-columns:minmax(0,1fr)} .pc-head{display:none} .pc-row{grid-template-columns:1fr 5.5rem 2rem; row-gap:.35rem} .pc-row .det{grid-column:1 / -1; grid-row:2} }
 </style>
 
 <div class="page">
