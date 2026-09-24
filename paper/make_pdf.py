@@ -35,6 +35,17 @@ def main() -> int:
             print("Tabelle 1 unvollständig", rows)
             return 1
         (ROOT / "paper" / "positions.json").write_text(json.dumps({"rows": rows}, ensure_ascii=False))
+
+        # live record: store today's position (automatic runs only), update the page
+        weights = page.evaluate("() => window.SAA_MODEL")
+        model = json.loads((ROOT / "docs" / "data" / "model.json").read_text())
+        sys.path.insert(0, str(ROOT / "src"))
+        from saa import track
+        if track.record(weights, model["signals"]["as_of"]):
+            print("Protokoll: neue Position gespeichert")
+        track.performance(model)
+        subprocess.run([sys.executable, str(ROOT / "web" / "render.py")], check=True)
+
         subprocess.run([sys.executable, str(ROOT / "paper" / "build_paper.py")], check=True)
         page.goto((ROOT / "paper" / "paper.html").as_uri())
         page.wait_for_timeout(800)

@@ -239,12 +239,23 @@ s4 = " ".join(s4)
 usd = lambda w: float(w[K.index("eq_us")] + w[K.index("gold")])
 s5_usd = (f"<b>Dollar.</b> US-Aktien und Gold sind ungesichert. Ein um 10 % stärkerer Euro kostet ein Depot mit 45 % Dollar-Anlagen rund 4,5 %. "
           f"Das Modellportfolio hält {pct(usd(w_tac), 0)} in Dollar-Anlagen, das Referenzportfolio {pct(usd(w_ref), 0)}.")
+CUR = M.get("currency")
+if CUR:
+    _r0, _r1 = CUR["rows"][0], CUR["rows"][-1]
+    s5_usd += f" Eine Absicherung kostet heute {pct(CUR['carry_now'])} p. a. auf den gesicherten Teil"
+    s5_usd += (" und hätte in der Finanzkrise nicht geholfen." if _r1["episodes"]["Finanzkrise"] < _r0["episodes"]["Finanzkrise"] else ".")
 
 bt_up = BT["excess_pa"] > 0
 s2_trend = (f"Das Trendsignal misst die Überrendite der letzten zwölf Monate über Geldmarkt, geteilt durch die Schwankung. "
             f"Es hat die Rendite um {pct(abs(BT['excess_pa']))} p. a. {'erhöht' if bt_up else 'gesenkt'}, bei einem Tracking Error von {pct(BT['te'])}. "
             f"In {int(round(BT['hit_years'] * 100))} % der Jahre lag das Portfolio mit Trend vor der Referenz, der maximale Verlust "
             f"{'sank' if BT['tactical']['mdd'] > BT['reference']['mdd'] else 'stieg'} von {pct(BT['reference']['mdd'])} auf {pct(BT['tactical']['mdd'])}.")
+RB = S.get("robustness") or []
+if RB:
+    npos = sum(1 for r in RB if r["excess_pa"] > 0)
+    ts = [r["t_stat"] for r in RB]
+    s2_trend += (f" Das Ergebnis hält in {npos} von {len(RB)} Varianten des Tests: anderer Rückblick, andere Kosten, halbe und doppelte "
+                 f"Verschiebung, spätere Umsetzung und beide Hälften der Stichprobe (t-Werte {num(min(ts), 1)} bis {num(max(ts), 1)}).")
 y0, y1 = M["meta"]["sample"][0][:4], M["meta"]["sample"][1][:4]
 s1_last = (f"Das Ergebnis liegt für {'jede Aktienregion' if all_below else 'die meisten Aktienregionen'} unter der Rendite seit {y0} (Abbildung 1). "
            "Die hohen Renditen der Vergangenheit kamen zu einem großen Teil aus steigenden Bewertungen. Das lässt sich nicht fortschreiben. "
@@ -275,6 +286,14 @@ def regime_corr(reg, a="eq_eu", b="bund"):
     c = np.array(M["cov"][reg]); i, j = K.index(a), K.index(b)
     return c[i][j] / np.sqrt(c[i][i] * c[j][j])
 URL = "philip-kroos.github.io/strategische-allokation"
+_tf = ROOT / "docs" / "data" / "track.json"
+_tr = json.loads(_tf.read_text()) if _tf.exists() else {}
+if _tr.get("positions"):
+    _d = _tr["start"]
+    track_line = (f"Seit dem {int(_d[8:])}. {MONTHS[int(_d[5:7]) - 1]} {_d[:4]} speichert das Modell jede Positionierung unveränderlich; "
+                  "die Wertentwicklung dieses Protokolls steht auf der Seite. ")
+else:
+    track_line = ""
 
 HTML = f"""<!doctype html>
 <html lang="de"><head><meta charset="utf-8">
@@ -367,7 +386,7 @@ footer{{margin-top:8pt;border-top:.6pt solid var(--rule);padding-top:4pt}}
 <p>{s5_usd} <b>Trendwenden.</b> Nach scharfen Einbrüchen erholen sich Märkte oft schneller, als das Zwölfmonatssignal reagiert, so 2009 und 2020. Die Mehrrendite kommt aus längeren Phasen, nicht aus Wendepunkten. <b>Schätzfehler.</b> Die Bandbreite der erwarteten Rendite ist für Aktien groß, für die USA {pct(us['band'][0])} bis {pct(us['band'][1])} p. a. Die Begrenzung auf zehn Prozentpunkte je Anlageklasse trägt dem Rechnung. {s5_regime}</p>
 
 <footer class="note">
-<b>Methode.</b> Monatsrenditen in EUR {M['meta']['sample'][0][:4]} bis {M['meta']['sample'][1][:4]}. Aktien: Kenneth R. French Data Library, in Euro umgerechnet. Bundesanleihen: Zinsstruktur der Bundesbank, Monatsende, als Parianleihe mit zehn Jahren Laufzeit. Unternehmensanleihen: ETF-Kurse ab 2009, davor aus Zinsen und Aktien rekonstruiert. Kovarianzen mit Ledoit-Wolf-Schrumpfung, kürzere Historien per Stambaugh-Projektion. Portfolio mit exaktem Active-Set-Löser. Die Daten und dieses Papier werden zweimal im Monat automatisch aktualisiert. Modell, Daten und Code: {URL}. Keine Anlageberatung.
+<b>Methode.</b> Monatsrenditen in EUR {M['meta']['sample'][0][:4]} bis {M['meta']['sample'][1][:4]}. Aktien: Kenneth R. French Data Library, in Euro umgerechnet. Bundesanleihen: Zinsstruktur der Bundesbank, Monatsende, als Parianleihe mit zehn Jahren Laufzeit. Unternehmensanleihen: ETF-Kurse ab 2009, davor aus Zinsen und Aktien rekonstruiert. Kovarianzen mit Ledoit-Wolf-Schrumpfung, kürzere Historien per Stambaugh-Projektion. Portfolio mit exaktem Active-Set-Löser. Die Daten und dieses Papier werden zweimal im Monat automatisch aktualisiert. {track_line}Modell, Daten und Code: {URL}. Keine Anlageberatung.
 </footer>
 </body></html>"""
 
