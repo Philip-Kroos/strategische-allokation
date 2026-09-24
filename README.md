@@ -47,7 +47,7 @@ python web/render.py                   # schreibt docs/index.html
 
 ## Monatliche Aktualisierung
 
-Ein GitHub-Workflow (`.github/workflows/monatsupdate.yml`) läuft am 3. jedes Monats:
+Ein GitHub-Workflow (`.github/workflows/monatsupdate.yml`) läuft am 6. und 20. jedes Monats und lässt sich unter Actions auch von Hand starten:
 
 ```bash
 PYTHONPATH=src python -m saa.fetch     # lädt alle Rohdaten nach data/raw/
@@ -55,8 +55,11 @@ PYTHONPATH=src python -m saa.build
 python web/render.py
 ```
 
+Der Workflow committet die neuen Daten, GitHub Pages veröffentlicht die Seite daraufhin neu.
 Jede Quelle wird einzeln geladen. Fällt eine aus, bleibt die letzte Datei stehen, `data/raw/fetch_log.json`
 hält fest, was geklappt hat. Bundrendite, €STR, Spread und Kurse kommen direkt aus den Daten.
+Die French Data Library veröffentlicht mit ein bis zwei Monaten Verzug. Fehlende Monate der Aktienreihen
+werden mit Index-ETFs in EUR überbrückt (EXSA, SXR8, IEMM) und später durch die Indexdaten ersetzt.
 CAPE und Dividendenrendite je Region haben keine freie Monatsquelle: sie stehen als datierte Anker in
 `config/inputs.json` und werden mit dem Kursindex fortgeschrieben, wobei der Zehnjahresdurchschnitt der
 Gewinne mit realem Wachstum plus Inflation mitwächst. Die Anker einmal im Quartal zu erneuern hält die
