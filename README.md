@@ -2,6 +2,26 @@
 
 [![Datenupdate](https://github.com/Philip-Kroos/strategische-allokation/actions/workflows/monatsupdate.yml/badge.svg)](https://github.com/Philip-Kroos/strategische-allokation/actions/workflows/monatsupdate.yml)
 
+## English overview
+
+This repository contains a **Python-based quantitative asset-allocation and data pipeline** developed for research and demonstration purposes. It is designed to collect, validate, transform, analyse and visualise macroeconomic and financial-market data in a reproducible workflow.
+
+### Programming and data workflow
+
+- **Data acquisition:** Python scripts retrieve data from sources including the **ECB Data Portal, Deutsche Bundesbank, FRED, Kenneth R. French Data Library, MSCI, iShares and market-data providers**.
+- **Data management and validation:** raw series are harmonised, transformed into monthly return and valuation datasets, checked for implausible observations and retained safely when individual sources are temporarily unavailable.
+- **Quantitative analysis:** the code estimates return and risk parameters, valuation and trend signals, covariance matrices, portfolio allocations, historical stress tests and Monte Carlo projections.
+- **Automation:** scheduled **GitHub Actions** refresh the underlying data, rebuild the model and publish updated outputs automatically.
+- **Compilation and visualisation:** the Python build process writes a structured model output which is rendered into an interactive web application and a regularly updated research note.
+
+The main Python modules are located in `src/saa/`. In particular, `fetch.py` handles data collection, `build.py` compiles the model output, and the scripts in `web/` render the results for publication.
+
+**Live application:** https://philip-kroos.github.io/strategische-allokation/
+
+---
+
+## Deutsche Dokumentation
+
 Ein Arbeitsmodell für die strategische und taktische Asset-Allokation aus Sicht eines Euro-Anlegers.
 Kern ist ein Portfolio-Check: Depot eingeben, Fonds werden in Regionen zerlegt, jede Position erhält
 Plus- und Minuspunkte aus Bewertung und Trend, und das Depot wird mit einem Modellportfolio gleichen
