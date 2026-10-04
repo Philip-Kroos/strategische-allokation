@@ -56,6 +56,72 @@ def record(weights: dict, signals_as_of: str, today: date | None = None, force: 
     return True
 
 
+HIST = ROOT / "data" / "track" / "verlauf.json"
+CHANGES = ROOT / "docs" / "data" / "verlauf.json"
+NOTICE = ROOT / "build" / "hinweis.md"
+NAMES = {"cash": "Geldmarkt", "bund": "Bundesanleihen", "credit": "Unternehmensanleihen", "eq_eu": "Aktien Europa",
+         "eq_us": "Aktien USA", "eq_em": "Aktien Schwellenländer", "gold": "Gold"}
+
+
+def grade(active: float) -> str:
+    """Stance as shown on the page: active weight relative to 8 points."""
+    s = active / 0.08
+    if s > 0.5:
+        return "deutlich übergewichten"
+    if s > 0.2:
+        return "übergewichten"
+    if s < -0.5:
+        return "deutlich untergewichten"
+    if s < -0.2:
+        return "untergewichten"
+    return "neutral"
+
+
+def snapshot_of(weights: dict, model: dict, today: date) -> dict:
+    total = sum(weights["total"])
+    w = {k: round(t / total, 4) for k, t in zip(weights["keys"], weights["total"])}
+    ref = dict(zip(weights["keys"], weights["ref"]))
+    sig = model["signals"]["classes"]
+    return {"date": today.isoformat(), "signals": model["signals"]["as_of"], "market": model["meta"]["as_of"][:10],
+            "regime": model["meta"]["regime"]["current"], "corr": model["signals"]["corr_now"],
+            "weights": w,
+            "stance": {k: grade(w[k] - ref[k]) for k in ORDER if k != "cash"},
+            "trend": {k: sig[k]["trend"] for k in ORDER if k != "cash"},
+            "expected": {a["key"]: a["expected"] for a in model["assets"]},
+            "cape": model["cape"]["current"]}
+
+
+def snapshot(weights: dict, model: dict, today: date | None = None, force: bool = False) -> dict:
+    """Store the state of this run (automatic runs only) and write the
+    comparison with the last state at least ten days older for the page.
+    If a stance or the regime changed, build/hinweis.md is written; the
+    workflow turns it into a GitHub notification."""
+    today = today or date.today()
+    hist = json.loads(HIST.read_text()) if HIST.exists() else []
+    now = snapshot_of(weights, model, today)
+    if force or os.environ.get("GITHUB_ACTIONS") == "true":
+        hist = [h for h in hist if h["date"] != now["date"]] + [now]
+        HIST.parent.mkdir(parents=True, exist_ok=True)
+        HIST.write_text(json.dumps(hist, ensure_ascii=False, indent=1))
+    older = [h for h in hist if (today - date.fromisoformat(h["date"])).days >= 10]
+    prev = older[-1] if older else None
+    out = {"now": now, "prev": prev, "notes": []}
+    if prev:
+        for k in ORDER:
+            if k != "cash" and prev["stance"].get(k) != now["stance"][k]:
+                out["notes"].append(f"{NAMES[k]}: {prev['stance'].get(k, 'neu')} → {now['stance'][k]}")
+        if prev["regime"] != now["regime"]:
+            out["notes"].append("Korrelationsregime gewechselt: Aktien und Bundesanleihen laufen jetzt "
+                                + ("gleichgerichtet." if now["regime"] == "pos" else "gegenläufig."))
+    CHANGES.write_text(json.dumps(out, ensure_ascii=False))
+    if out["notes"] and os.environ.get("GITHUB_ACTIONS") == "true":
+        NOTICE.parent.mkdir(exist_ok=True)
+        moves = "\n".join(f"- {n}" for n in out["notes"])
+        NOTICE.write_text(f"Änderungen gegenüber dem Stand vom {prev['date']}:\n\n{moves}\n\n"
+                          "https://philip-kroos.github.io/strategische-allokation/\n")
+    return out
+
+
 def performance(model: dict) -> dict:
     rows = _read()
     out = {"positions": [], "months": [], "start": None}

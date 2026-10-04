@@ -244,6 +244,28 @@ def regime_now(rc: pd.Series) -> dict:
     return {"current": "pos" if pos else "neg", "since": rc.index[i].strftime("%Y-%m")}
 
 
+def tipping_point(inputs: dict, fit, cma: dict) -> dict:
+    """How far US equities would have to fall for their expected return to
+    match Europe's. A lower price raises 1/CAPE and the dividend yield; both
+    estimators in equity_cma are re-evaluated at the new price."""
+    from .cma import equity_cma
+    us, target = inputs["eq_us"], cma["eq_eu"]["expected"]
+    infl = inputs["inflation_eur"]["value"]
+
+    def exp_at(d: float) -> float:
+        x = {**us, "cape": us["cape"] * (1 - d), "dy": us["dy"] / (1 - d)}
+        return equity_cma(x, fit, infl)["expected"]
+
+    if exp_at(0.0) >= target:
+        return {"decline": 0.0, "cape": r4(us["cape"], 1), "target": r4(target)}
+    lo, hi = 0.0, 0.9
+    for _ in range(60):
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if exp_at(mid) < target else (lo, mid)
+    d = (lo + hi) / 2
+    return {"decline": r4(d, 3), "cape": r4(us["cape"] * (1 - d), 1), "target": r4(target)}
+
+
 def as_of(inputs: dict) -> str:
     try:
         return json.loads((ROOT / "data" / "raw" / "fetch_log.json").read_text())["fetched"]
@@ -322,6 +344,7 @@ def main() -> None:
             "gold_eom_from": R.monthly_returns(R.yahoo_monthly("GC=F")).index[0].strftime("%Y-%m"),
             "bund_mod_duration": r4(mod_dur, 2),
             "regime": regime_now(rc),
+            "tipping_point": tipping_point(inputs, fit, cma),
             "status": status_block(checks),
         },
         "assets": [
