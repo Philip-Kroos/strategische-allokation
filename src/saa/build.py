@@ -231,7 +231,7 @@ def status_block(checks: list) -> dict:
         log = {}
     st = log.get("status", {})
     return {"fetched": log.get("fetched"), "sources_ok": log.get("sources_ok"), "sources": log.get("sources"),
-            "failed": [k for k, v in st.items() if v != "ok"], "checks": checks}
+            "failed": [k for k, v in st.items() if not str(v).startswith("ok")], "checks": checks}
 
 
 def regime_now(rc: pd.Series) -> dict:

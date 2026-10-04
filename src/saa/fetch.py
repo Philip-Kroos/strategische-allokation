@@ -257,9 +257,19 @@ def parse_ishares_geo(html: str) -> dict:
     return {"asof": f"{asof[:4]}-{asof[4:6]}-{asof[6:]}", "weights": w}
 
 
-def ishares_countries() -> None:
-    out = {k: parse_ishares_geo(get(u).text) for k, u in ISHARES_GEO.items()}
+def ishares_countries() -> str | None:
+    """Per region: a failed or implausible page leaves that region on its
+    fallback weights, the other region is still updated."""
+    out, bad = {}, []
+    for k, u in ISHARES_GEO.items():
+        try:
+            out[k] = parse_ishares_geo(get(u).text)
+        except Exception as e:  # noqa: BLE001
+            bad.append(f"{k}: {e}")
+    if not out:
+        raise ValueError("; ".join(bad))
     (RAW / "country_weights.json").write_text(json.dumps(out, ensure_ascii=False, indent=1))
+    return "; ".join(bad) or None
 
 
 def parse_msci(text: str) -> dict:
@@ -308,10 +318,10 @@ def main() -> int:
     for name, fn in SOURCES:
         t0 = time.time()
         try:
-            fn()
+            note = fn()
             ok += 1
-            status[name] = "ok"
-            print(f"ok     {name} ({time.time() - t0:.0f} s)", flush=True)
+            status[name] = "ok" if not note else f"ok, teilweise Ersatzwerte ({str(note)[:100]})"
+            print(f"ok     {name} ({time.time() - t0:.0f} s){' ' + str(note) if note else ''}", flush=True)
         except Exception as e:
             status[name] = f"Fehler: {str(e)[:120]}"
             print(f"FEHLER {name} ({time.time() - t0:.0f} s): {e}", flush=True)
