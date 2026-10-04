@@ -103,21 +103,28 @@ def snapshot(weights: dict, model: dict, today: date | None = None, force: bool 
         hist = [h for h in hist if h["date"] != now["date"]] + [now]
         HIST.parent.mkdir(parents=True, exist_ok=True)
         HIST.write_text(json.dumps(hist, ensure_ascii=False, indent=1))
+    def notes(prev: dict | None) -> list[str]:
+        if not prev:
+            return []
+        out = [f"{NAMES[k]}: {prev['stance'].get(k, 'neu')} → {now['stance'][k]}"
+               for k in ORDER if k != "cash" and prev["stance"].get(k) != now["stance"][k]]
+        if prev["regime"] != now["regime"]:
+            out.append("Korrelationsregime gewechselt: Aktien und Bundesanleihen laufen jetzt "
+                       + ("gleichgerichtet." if now["regime"] == "pos" else "gegenläufig."))
+        return out
+
+    # the page compares with the state at least ten days earlier
     older = [h for h in hist if (today - date.fromisoformat(h["date"])).days >= 10]
     prev = older[-1] if older else None
-    out = {"now": now, "prev": prev, "notes": []}
-    if prev:
-        for k in ORDER:
-            if k != "cash" and prev["stance"].get(k) != now["stance"][k]:
-                out["notes"].append(f"{NAMES[k]}: {prev['stance'].get(k, 'neu')} → {now['stance'][k]}")
-        if prev["regime"] != now["regime"]:
-            out["notes"].append("Korrelationsregime gewechselt: Aktien und Bundesanleihen laufen jetzt "
-                                + ("gleichgerichtet." if now["regime"] == "pos" else "gegenläufig."))
+    out = {"now": now, "prev": prev, "notes": notes(prev)}
     CHANGES.write_text(json.dumps(out, ensure_ascii=False))
-    if out["notes"] and os.environ.get("GITHUB_ACTIONS") == "true":
+    # the notification only reports what is new since the last run
+    last = [h for h in hist if h["date"] < now["date"]]
+    new = notes(last[-1] if last else None)
+    if new and os.environ.get("GITHUB_ACTIONS") == "true":
         NOTICE.parent.mkdir(exist_ok=True)
-        moves = "\n".join(f"- {n}" for n in out["notes"])
-        NOTICE.write_text(f"Änderungen gegenüber dem Stand vom {prev['date']}:\n\n{moves}\n\n"
+        moves = "\n".join(f"- {n}" for n in new)
+        NOTICE.write_text(f"Änderungen gegenüber dem Lauf vom {last[-1]['date']}:\n\n{moves}\n\n"
                           "https://philip-kroos.github.io/strategische-allokation/\n")
     return out
 
