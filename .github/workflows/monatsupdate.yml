@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  issues: write   # Hinweis per GitHub-Benachrichtigung, wenn sich eine Einstufung ändert
 
 jobs:
   update:
@@ -49,3 +50,10 @@ jobs:
             git commit -m "Datenupdate $(date -u +%Y-%m)"
             git push
           fi
+
+      - name: Hinweis bei Signalwechsel
+        if: hashFiles('build/hinweis.md') != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --title "Signalwechsel $(date -u +%d.%m.%Y)" --body-file build/hinweis.md
