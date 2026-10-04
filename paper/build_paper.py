@@ -183,6 +183,9 @@ kp1 = (f"<b>{kp1_head}</b> Für {SHORT[best_eq]} erwarten wir {pct(A[best_eq]['e
 if cheap_explains and gap > 0.01:
     kp1 += (f" Der Abstand kommt vor allem aus der Bewertung: CAPE {num(A[worst_eq]['detail']['cape'], 1)} "
             f"gegenüber {num(A[best_eq]['detail']['cape'], 1)}.")
+_tp = M["meta"].get("tipping_point") or {}
+if worst_eq == "eq_us" and best_eq == "eq_eu" and _tp.get("decline", 0) > 0.05:
+    kp1 += f" Erst nach einem Kursrückgang um {num(_tp['decline'] * 100, 0)} % böten US-Aktien dieselbe erwartete Rendite."
 
 vb, vt = V["bewertung"], V["trend"]
 if vb["excess_pa"] < 0 < vt["excess_pa"]:

@@ -44,6 +44,9 @@ def main() -> int:
         if track.record(weights, model["signals"]["as_of"]):
             print("Protokoll: neue Position gespeichert")
         track.performance(model)
+        ch = track.snapshot(weights, model)
+        for n in ch["notes"]:
+            print("Änderung:", n)
         subprocess.run([sys.executable, str(ROOT / "web" / "render.py")], check=True)
 
         subprocess.run([sys.executable, str(ROOT / "paper" / "build_paper.py")], check=True)
