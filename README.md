@@ -11,7 +11,7 @@ This repository contains a **Python-based quantitative asset-allocation and data
 - **Data acquisition:** Python scripts retrieve data from sources including the **ECB Data Portal, Deutsche Bundesbank, FRED, Kenneth R. French Data Library, MSCI, iShares and market-data providers**.
 - **Data management and validation:** raw series are harmonised, transformed into monthly return and valuation datasets, checked for implausible observations and retained safely when individual sources are temporarily unavailable.
 - **Quantitative analysis:** the code estimates return and risk parameters, valuation and trend signals, covariance matrices, portfolio allocations, historical stress tests and Monte Carlo projections.
-- **Automation:** scheduled **GitHub Actions** refresh the underlying data, rebuild the model and publish updated outputs automatically.
+- **Automation:** scheduled **GitHub Actions** refresh the underlying data, rebuild the model and publish updated outputs automatically. Each run stores the model's positioning; a change in any stance triggers a GitHub notification.
 - **Compilation and visualisation:** the Python build process writes a structured model output which is rendered into an interactive web application and a regularly updated research note.
 
 The main Python modules are located in `src/saa/`. In particular, `fetch.py` handles data collection, `build.py` compiles the model output, and the scripts in `web/` render the results for publication.
@@ -36,6 +36,8 @@ Nebenbedingungen, Vermögensprojektion und Stresstests mit regimeabhängigen Kor
 
 | Baustein | Methode |
 |---|---|
+| Aktuelle Einschätzung | Modellportfolio gegen Referenz auf einen Blick, Änderungen seit dem letzten Update, Kipppunkt USA (Kursrückgang, ab dem US-Aktien dieselbe erwartete Rendite wie Europa bieten) |
+| Umsetzung | Frei wählbare Aktienquote auf Basis des Modellportfolios, Beispiel-ETFs je Klasse, Rebalancing über die Sparrate ohne Verkäufe |
 | Portfolio-Check | Durchschau auf Fonds, Zusatzrisiko für Einzelaktien und enge Indizes, Modellportfolio mit gleichem Risiko und begrenzten aktiven Abweichungen |
 | Signale | Bewertung (CAPE, Realrendite, Spread, realer Goldpreis) geht über die Zehnjahresrenditen in die strategische Quote. Trend (12-Monats-Überrendite je Volatilität) verschiebt die Quote taktisch. Test seit 1993 ohne Blick in die Zukunft: Trend +1,0 % p. a. nach Kosten (t-Wert 4,0), Bewertung als Monatssignal −0,6 % p. a. |
 | Renditeannahmen Aktien | Mittel aus CAPE-Regression (Shiller-Daten 1881–2013, HAC-Standardfehler, Out-of-sample-Test) und Grinold-Kroner-Bausteinen (Dividende, Nettorückkäufe bzw. Verwässerung, reales Gewinnwachstum, teilweise Bewertungsnormalisierung) |
@@ -58,7 +60,7 @@ docs/index.html           Fertige Seite für GitHub Pages (Daten eingebettet)
 docs/data/model.json      Modelloutput
 paper/                    Arbeitspapier: build_paper.py erzeugt paper.html, make_pdf.py das PDF
 data/derived/             Übernommene Bewertungen je Region (Ersatz und Vergleichswert für den nächsten Lauf)
-data/track/               Protokoll der Positionierung
+data/track/               Protokoll der Positionierung und Verlauf der Einschätzung
 ```
 
 ## Neu rechnen
@@ -103,6 +105,11 @@ ihren letzten Stand, und GitHub meldet den Fehler.
 Bei jedem Lauf in einem neuen Monat speichert das Modell seine Positionierung in `data/track/positionen.csv`.
 Sie gilt ab dem Folgemonat und wird danach nicht mehr verändert. Die Seite zeigt die Wertentwicklung dieses
 Protokolls gegenüber dem Referenzportfolio.
+
+Zusätzlich hält jeder automatische Lauf den Stand von Quoten, Einstufungen, Trends und erwarteten Renditen in
+`data/track/verlauf.json` fest. Die Seite vergleicht mit dem Stand von mindestens zehn Tagen zuvor. Ändert sich
+eine Einstufung oder das Korrelationsregime, legt der Workflow ein GitHub-Issue an. GitHub schickt dann eine
+Benachrichtigung per E-Mail.
 
 Das Arbeitspapier (`docs/arbeitspapier.pdf`) wird bei jedem Lauf neu gesetzt: `paper/make_pdf.py` liest die
 Quoten aus der fertigen Seite, `paper/build_paper.py` schreibt den Text aus den Modellzahlen, auch die
