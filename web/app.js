@@ -356,7 +356,7 @@
     });
     if (state.edit) tb.querySelectorAll("input.cma").forEach((inp, i) => inp.addEventListener("change", () => {
       const v = parseFloat(inp.value.replace(",", "."));
-      if (!isNaN(v)) { state.exp[i] = v / 100; renderAll(true); }
+      if (!isNaN(v)) { state.exp[i] = v / 100; renderAll(true); drawUx(); }
     }));
   }
 
@@ -705,7 +705,7 @@
     document.getElementById("btn-reset").hidden = false;
     drawTable();
   });
-  on("btn-reset", "click", () => { state.exp = baseExp.slice(); drawTable(); renderAll(true); });
+  on("btn-reset", "click", () => { state.exp = baseExp.slice(); drawTable(); renderAll(true); drawUx(); });
   let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => renderAll(true), 150); });
   // portfolio check and tactical signals (web/check.js is inserted here)
   method();

@@ -169,6 +169,52 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
 .bar::after{content:""; position:absolute; left:50%; top:-2px; bottom:-2px; width:1px; background:var(--muted)}
 .warn{border-left:2px solid var(--neg); padding-left:.8rem; margin-top:.8rem; font-family:var(--sans); font-size:.84rem; color:var(--ink2)}
 @media (max-width:860px){ .pos-list{grid-template-columns:minmax(0,1fr)} .pc-head{display:none} .pc-row{grid-template-columns:1fr 5.5rem 2rem; row-gap:.35rem} .pc-row .det{grid-column:1 / -1; grid-row:2} }
+
+/* section navigation */
+.toc{position:sticky; top:0; z-index:5; background:var(--bg); border-bottom:1px solid var(--rule); margin:1.6rem 0 0; padding:0; display:flex; gap:1.3rem; overflow-x:auto; scrollbar-width:none; font-family:var(--sans); font-size:.8rem; white-space:nowrap}
+.toc::-webkit-scrollbar{display:none}
+.toc a{color:var(--ink2); text-decoration:none; padding:.7rem 0 .6rem; border-bottom:2px solid transparent}
+.toc a:hover{color:var(--ink)}
+.toc a.on{color:var(--ink); border-bottom-color:var(--accent); font-weight:600}
+section{scroll-margin-top:3.2rem}
+
+/* current view */
+.lage{margin-top:2.6rem}
+.lage .sec-head{display:flex; justify-content:space-between; align-items:baseline; gap:1rem; flex-wrap:wrap}
+.status{font-family:var(--sans); font-size:.78rem; color:var(--ink2); display:inline-flex; align-items:center; gap:.45rem}
+.status i{width:.5rem; height:.5rem; border-radius:50%; background:var(--pos); display:inline-block}
+.status i.warn{background:var(--c-gold)}
+.lage-grid{display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:2.4rem; align-items:start}
+.lage-side{display:grid; gap:1rem}
+.card{background:var(--panel); border-radius:6px; padding:1rem 1.15rem 1.05rem; font-family:var(--sans); font-size:.86rem; color:var(--ink2); line-height:1.45}
+.card .label{font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:.45rem}
+.card .big{font-size:1.55rem; font-weight:500; color:var(--ink); font-variant-numeric:tabular-nums; line-height:1.15; margin-bottom:.3rem}
+.card ul{list-style:none; padding:0; margin:.2rem 0 0}
+.card li{padding:.28rem 0; border-top:1px solid var(--rule)}
+.card li:first-child{border-top:0}
+.card li b{color:var(--ink); font-weight:600}
+.chg{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:.2rem .8rem; margin-top:.4rem; font-variant-numeric:tabular-nums}
+.chg span:nth-child(even){text-align:right; color:var(--ink)}
+
+/* implementation */
+#tbl-ux td.prod{text-align:left; white-space:normal; min-width:14rem; line-height:1.35}
+#tbl-ux td.prod small{display:block; color:var(--muted); font-size:.74rem}
+#tbl-ux input{width:6.5rem; font:inherit; text-align:right; padding:.25rem .4rem; border:1px solid var(--rule); border-radius:4px; background:var(--bg); color:var(--ink); font-variant-numeric:tabular-nums}
+#tbl-ux tfoot td{font-weight:600; border-bottom:0; border-top:1px solid var(--ink)}
+@media (max-width:600px){ #tbl-ux th:nth-child(4),#tbl-ux td:nth-child(4){display:none} #tbl-ux td.prod{min-width:9.5rem} #tbl-ux input{width:5.2rem} }
+
+/* polish */
+.stat .v small{display:block; margin:.15rem 0 0; font-size:.74rem}
+tbody tr:hover td{background:var(--rule2)}
+#tbl-ux tbody tr:hover td{background:transparent}
+
+@media (max-width:860px){ .lage-grid{grid-template-columns:1fr} }
+@media print{
+  .toc,.controls,.pc-wrap,.btn,#tip{display:none!important}
+  body{font-size:10.5pt; padding:0} .page{padding:0; max-width:none}
+  section{margin-top:2rem; break-inside:avoid-page}
+  a{color:inherit; text-decoration:none}
+}
 </style>
 
 <div class="page">
@@ -178,6 +224,10 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
     <h1>Strategische Allokation für den Euro-Anleger</h1>
     <div class="byline">Philip Kroos · Portfolio-Check, taktische Signale, Kapitalmarktannahmen und Stresstests · <a href="arbeitspapier.pdf">Arbeitspapier (PDF)</a></div>
   </header>
+
+  <nav class="toc" aria-label="Abschnitte">
+    <a href="#lage">Einschätzung</a><a href="#check">Portfolio-Check</a><a href="#signale">Signale</a><a href="#annahmen">Annahmen</a><a href="#evidenz">Evidenz</a><a href="#regime">Regime</a><a href="#portfolio">Portfolio</a><a href="#projektion">Projektion</a><a href="#stress">Stresstests</a><a href="#umsetzung">Umsetzung</a><a href="#methodik">Methodik</a>
+  </nav>
 
   <div class="abstract">
     <div class="prose">
@@ -191,6 +241,20 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
       <div class="keyfigs" id="keyfigs"></div>
     </div>
   </div>
+
+  <section id="lage" class="lage">
+    <div class="sec-head"><h2>Aktuelle Einschätzung</h2><span class="status" id="lage-status"></span></div>
+    <div class="lage-grid">
+      <figure style="margin-top:0">
+        <div class="fig-title">Modellportfolio gegen Referenz <span class="muted" id="lage-cap"></span></div>
+        <div class="chart" id="fig-lage"></div>
+      </figure>
+      <div class="lage-side">
+        <div class="card"><div class="label">Seit dem letzten Update</div><div id="lage-changes"></div></div>
+        <div class="card"><div class="label">Kipppunkt USA</div><div id="lage-tip"></div></div>
+      </div>
+    </div>
+  </section>
 
   <section id="check">
     <div class="sec-head"><h2><span class="no">1</span>Portfolio-Check</h2></div>
@@ -410,9 +474,43 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
     <p class="note" id="fx-note"></p>
   </section>
 
+  <section id="umsetzung">
+    <div class="sec-head"><h2><span class="no">9</span>Umsetzung mit ETFs</h2></div>
+    <div class="prose">
+      <p>Das Modellportfolio lässt sich mit sieben börsengehandelten Produkten abbilden. Die Aktienquote ist frei wählbar. Der Regler verschiebt das Verhältnis von Aktien zu Anleihen und Gold, die Aufteilung innerhalb beider Blöcke folgt dem Modell.</p>
+      <p>Rebalanciert wird über die Sparrate. Neues Geld fließt zuerst in die Klassen, die am weitesten unter ihrem Ziel liegen. Verkauft wird nichts, das spart Steuern und Kosten.</p>
+    </div>
+    <div class="controls">
+      <div class="ctl">
+        <label for="in-eq">Aktienquote <output id="out-eq"></output></label>
+        <input type="range" id="in-eq" min="20" max="100" step="5" value="55">
+        <div class="hint" id="hint-eq"></div>
+      </div>
+      <div class="ctl">
+        <label for="in-rate">Sparrate pro Monat (EUR)</label>
+        <input class="numin" id="in-rate" type="text" inputmode="numeric" value="500">
+        <div class="hint">Für eine Einmalanlage den Betrag als Rate eintragen.</div>
+      </div>
+      <div class="ctl">
+        <label>Bestehendes Depot</label>
+        <div class="hint" style="margin-top:0">Optional: heutige Werte je Klasse in Tabelle 7 eintragen. Ohne Eingabe wird die Rate nach Zielgewicht aufgeteilt.</div>
+        <button type="button" class="btn" id="btn-ux-reset" style="margin-top:.55rem">Depotwerte löschen</button>
+      </div>
+    </div>
+    <div class="stats" id="ux-stats"></div>
+    <div class="tablewrap">
+      <table id="tbl-ux">
+        <caption>Tabelle 7 <span class="muted">Zielgewichte, Beispielprodukte und Aufteilung der nächsten Sparrate</span></caption>
+        <thead><tr><th>Anlageklasse</th><th>Ziel</th><th style="text-align:left">Beispielprodukt, thesaurierend</th><th>Kosten p. a.</th><th>Depot heute (EUR)</th><th>Diese Rate</th><th>Danach</th></tr></thead>
+        <tbody></tbody><tfoot></tfoot>
+      </table>
+    </div>
+    <p class="note" id="ux-note"></p>
+  </section>
+
   <!-- 7 -->
   <section id="methodik" class="method">
-    <div class="sec-head"><h2><span class="no">9</span>Methodik und Grenzen</h2></div>
+    <div class="sec-head"><h2><span class="no">10</span>Methodik und Grenzen</h2></div>
     <div class="prose" id="method-body"></div>
   </section>
 
@@ -425,6 +523,7 @@ sup a{text-decoration:none; font-family:var(--sans); font-size:.7em}
 
 <script id="model" type="application/json">__MODEL__</script>
 <script id="track" type="application/json">__TRACK__</script>
+<script id="changes" type="application/json">__CHANGES__</script>
 <script>
 __APP__
 </script>

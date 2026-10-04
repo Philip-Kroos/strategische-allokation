@@ -332,8 +332,157 @@
     out.innerHTML = html;
   }
 
+  // ================================================================ current view
+  function drawLage() {
+    const host = document.getElementById("fig-lage");
+    if (!host) return;
+    const W = width("fig-lage"), narrow = W < 520, rowH = 34;
+    const m = { l: narrow ? 122 : Math.min(160, W * 0.32), r: narrow ? 46 : 104, t: 24, b: 26 };
+    const Hh = m.t + m.b + rowH * N;
+    const f = frame(host, W, Hh, m);
+    const act = K.map((k, i) => MODEL.total[i] - wRef[i]);
+    const lim = Math.max(0.12, ...act.map(Math.abs));
+    const x = lin(-lim, lim, f.x0 + 26, f.x1 - 30);
+    const pp = (v) => (v > 0.0049 ? "+" : v < -0.0049 ? "−" : "") + nf(0).format(Math.abs(v * 100));
+    [-0.1, -0.05, 0, 0.05, 0.1].forEach((t) => {
+      el("line", { x1: x(t), x2: x(t), y1: f.y1 - 4, y2: f.y0, class: t === 0 ? "zero" : "grid" }, f.svg);
+      txt(f.svg, x(t), f.y0 + 16, pp(t), { "text-anchor": "middle" });
+    });
+    txt(f.svg, x(0) - 8, 12, narrow ? "← unter" : "← untergewichtet", { class: "lbl", "text-anchor": "end" });
+    txt(f.svg, x(0) + 8, 12, narrow ? "über →" : "übergewichtet →", { class: "lbl" });
+    txt(f.svg, f.x1 + 12, 12, "Modell", { class: "lbl" });
+    if (!narrow) txt(f.svg, f.x1 + 56, 12, "Ref.", { class: "lbl" });
+    K.forEach((k, i) => {
+      const y = m.t + rowH * i + rowH / 2, a = act[i];
+      el("circle", { cx: 8, cy: y - 4, r: 4.5, fill: color(k) }, f.svg);
+      txt(f.svg, 18, y, SHORT[k], { class: "lbl", "font-size": 12 });
+      el("rect", { x: x(Math.min(0, a)), y: y - 9, width: Math.max(Math.abs(x(a) - x(0)), 1), height: 14, fill: color(k), rx: 2 }, f.svg);
+      if (Math.abs(a) >= 0.005) txt(f.svg, a > 0 ? x(a) + 5 : x(a) - 5, y + 1, pp(a), { class: "lbl-strong", "text-anchor": a > 0 ? "start" : "end", "font-size": 11 });
+      txt(f.svg, f.x1 + 12, y + 1, pct(MODEL.total[i], 0), { class: "lbl-strong" });
+      if (!narrow) txt(f.svg, f.x1 + 56, y + 1, pct(wRef[i], 0), { class: "lbl" });
+      const hit = el("rect", { x: 0, y: y - rowH / 2, width: W, height: rowH, fill: "transparent" }, f.svg);
+      hover(hit, () => `<b>${name(k)}</b><br>Modell ${pct(MODEL.total[i])}, Referenz ${pct(wRef[i], 0)}<br>Abweichung ${pp(a)} Prozentpunkte${k === "cash" ? "" : "<br>Einstufung: " + grade(stance(k)).t}`);
+    });
+    document.getElementById("lage-cap").textContent = `Abweichung in Prozentpunkten bei ${pct(REFVOL)} Volatilität, strategisch und taktisch, Signale zum ${monthName(SGN.as_of)}`;
+  }
+  function lageText() {
+    const st = M.meta.status || {}, asof = new Date(M.meta.as_of);
+    const nx = new Date(asof);
+    if (asof.getDate() < 6) nx.setDate(6); else if (asof.getDate() < 20) nx.setDate(20); else nx.setMonth(nx.getMonth() + 1, 6);
+    const failed = (st.failed || []).filter((f) => f !== "FRED");
+    const ok = !failed.length && !(st.checks || []).length;
+    const src = st.sources ? (failed.length ? `${st.sources - failed.length} von ${st.sources} Quellen aktuell` : "alle Quellen aktuell") : "";
+    document.getElementById("lage-status").innerHTML = `<i class="${ok ? "" : "warn"}"></i>Daten vom ${asof.toLocaleDateString("de-DE")}${src ? " · " + src : ""} · nächstes Update am ${nx.toLocaleDateString("de-DE", { day: "numeric", month: "long" })}`;
+
+    let C = {};
+    try { C = JSON.parse(document.getElementById("changes").textContent || "{}"); } catch (e) { C = {}; }
+    const box = document.getElementById("lage-changes");
+    if (!C.prev || !C.now) {
+      box.innerHTML = `<p style="margin:0">Der Vergleich erscheint nach dem nächsten automatischen Lauf.</p>`;
+    } else {
+      const moves = K.map((k) => [k, C.prev.weights[k], C.now.weights[k]]).filter(([, a, b]) => Math.abs(b - a) >= 0.01)
+        .sort((p, q) => Math.abs(q[2] - q[1]) - Math.abs(p[2] - p[1]));
+      const flips = K.filter((k) => k !== "cash" && C.prev.trend[k] != null && Math.sign(C.prev.trend[k]) !== Math.sign(C.now.trend[k]));
+      let h = `<p style="margin:0 0 .35rem">Gegenüber dem ${new Date(C.prev.date).toLocaleDateString("de-DE")}${C.prev.signals !== C.now.signals ? `, Signale zum ${monthName(C.now.signals)} statt ${monthName(C.prev.signals)}` : ""}:</p>`;
+      h += C.notes.length
+        ? `<ul>${C.notes.map((n) => { const [a, ...b] = n.split(":"); return `<li><b>${a}</b>:${b.join(":")}</li>`; }).join("")}</ul>`
+        : `<p style="margin:0">Keine Einstufung hat sich geändert.</p>`;
+      if (moves.length) h += `<div class="chg">${moves.slice(0, 4).map(([k, a, b]) => `<span>${SHORT[k]}</span><span>${pct(a, 0)} → ${pct(b, 0)}</span>`).join("")}</div>`;
+      if (flips.length) h += `<p style="margin:.45rem 0 0">Trend gedreht: ${flips.map((k) => `${SHORT[k]} jetzt ${C.now.trend[k] > 0 ? "positiv" : "negativ"}`).join(", ")}.</p>`;
+      box.innerHTML = h;
+    }
+    const tp = M.meta.tipping_point;
+    document.getElementById("lage-tip").innerHTML = tp && tp.decline > 0
+      ? `<div class="big">−${nf(0).format(tp.decline * 100)} %</div>So weit müssten US-Aktien fallen, damit sie dieselbe erwartete Rendite bieten wie Europa (${pct(tp.target)} p. a.). Das entspräche einem CAPE von ${num(tp.cape, 1)} statt heute ${num(M.cape.current.eq_us, 1)}.`
+      : `US-Aktien bieten derzeit mindestens die erwartete Rendite Europas.`;
+  }
+
+  // ================================================================ implementation with ETFs
+  const PROD = {
+    cash: ["Xtrackers II EUR Overnight Rate Swap 1C", "LU0290358497", 0.0010],
+    bund: ["Xtrackers II Germany Government Bond 1C", "LU0643975161", 0.0015],
+    credit: ["Xtrackers II EUR Corporate Bond 1C", "LU0478205379", 0.0009],
+    eq_eu: ["iShares Core MSCI Europe (Acc)", "IE00B4K48X80", 0.0012],
+    eq_us: ["iShares Core S&P 500 (Acc)", "IE00B5BMR087", 0.0007],
+    eq_em: ["iShares Core MSCI EM IMI (Acc)", "IE00BKM4GZ66", 0.0018],
+    gold: ["Xetra-Gold, physisch hinterlegt", "DE000A0S9GB0", 0.0030],
+  };
+  const EQK = ["eq_eu", "eq_us", "eq_em"];
+  const eqBase = EQK.reduce((s, k) => s + MODEL.total[idx[k]], 0);
+  const ux = { q: Math.min(1, Math.max(0.2, Math.round(eqBase * 20) / 20)), rate: 500, depot: K.map(() => 0) };
+  const uxWeights = (q) => K.map((k, i) => EQK.includes(k) ? MODEL.total[i] * q / eqBase : MODEL.total[i] * (1 - q) / (1 - eqBase));
+  // split the contribution: fill the largest shortfalls against the target first, never sell
+  function allocate(w, V, S) {
+    const tot = V.reduce((a, b) => a + b, 0) + S;
+    const short = w.map((x, i) => Math.max(tot * x - V[i], 0));
+    const D = short.reduce((a, b) => a + b, 0);
+    const a = (D > 0 ? short.map((d) => S * d / D) : w.map((x) => S * x)).map((v) => Math.round(v));
+    const diff = Math.round(S) - a.reduce((s, v) => s + v, 0);
+    if (diff) a[a.indexOf(Math.max(...a))] += diff;
+    return a;
+  }
+  const parseEur = (s) => { const v = parseFloat(String(s).replace(/\./g, "").replace(",", ".").replace(/[^\d.]/g, "")); return isNaN(v) ? 0 : Math.max(0, v); };
+  function drawUx() {
+    const w = uxWeights(ux.q), mt = metrics(w, SIG[CUR]);
+    document.getElementById("out-eq").textContent = pct(ux.q, 0);
+    document.getElementById("hint-eq").textContent = `Modell beim Referenzrisiko: ${pct(eqBase, 0)}. Eine höhere Quote bringt mehr erwartete Rendite und tiefere Rückschläge.`;
+    const infl = M.meta.inflation.value, cost = dot(w, K.map((k) => PROD[k][2]));
+    const real = (1 + mt.eg - cost) / (1 + infl) - 1, Y = 20, n = Y * 12, rm = Math.pow(1 + real, 1 / 12) - 1;
+    const fv = ux.rate * (Math.abs(rm) > 1e-9 ? (Math.pow(1 + rm, n) - 1) / rm : n);
+    const stat = (v, k, sub) => `<div class="stat"><div class="v">${v}${sub ? `<small>${sub}</small>` : ""}</div><div class="k">${k}</div></div>`;
+    document.getElementById("ux-stats").innerHTML =
+      stat(pct(mt.eg), "Erwartete Rendite p. a., 10 Jahre", `real nach Kosten ${pct(real)}`) +
+      stat(pct(mt.vol), "Volatilität p. a.") +
+      stat(spct(mt.worst12), `Schlechteste 12 Monate ${M.meta.sample[0].slice(0, 4)}–${M.meta.sample[1].slice(0, 4)}`) +
+      stat(spct(mt.mdd), "Max. Drawdown, historisch") +
+      stat(eur(fv), `Sparplan nach ${Y} Jahren, erwartet, in heutiger Kaufkraft`, `eingezahlt ${eur(ux.rate * n)}`);
+    const V = ux.depot, a = allocate(w, V, ux.rate), tot = V.reduce((s, v) => s + v, 0) + ux.rate;
+    document.querySelector("#tbl-ux tbody").innerHTML = K.map((k, i) => {
+      const p = PROD[k];
+      return `<tr><td><span class="sw" style="background:${color(k)}"></span>${name(k)}</td><td><b>${pct(w[i], 0)}</b></td>
+        <td class="prod">${p[0]}<small>${p[1]}</small></td><td>${pct(p[2], 2)}</td>
+        <td><input id="ux-v-${k}" type="text" inputmode="numeric" placeholder="0" value="${V[i] ? nf(0).format(V[i]) : ""}" aria-label="Depotwert ${name(k)} in Euro"></td>
+        <td>${a[i] ? nf(0).format(a[i]) + " €" : "–"}</td><td>${tot > 0 ? pct((V[i] + a[i]) / tot, 0) : "–"}</td></tr>`;
+    }).join("");
+    document.querySelector("#tbl-ux tfoot").innerHTML = `<tr><td>Summe</td><td>100 %</td><td></td><td>${pct(cost, 2)}</td><td>${nf(0).format(V.reduce((s, v) => s + v, 0))} €</td><td>${nf(0).format(ux.rate)} €</td><td>100 %</td></tr>`;
+    K.forEach((k, i) => document.getElementById(`ux-v-${k}`).addEventListener("change", (e) => { ux.depot[i] = parseEur(e.target.value); drawUx(); }));
+    const gap = K.map((k, i) => (V[i] + a[i]) / tot - w[i]);
+    const off = Math.max(...gap.map(Math.abs));
+    document.getElementById("ux-note").innerHTML = `Zielgewichte: Modellportfolio mit Trend, Signale zum ${monthName(SGN.as_of)}. Sie ändern sich mit den Updates am 6. und 20. ${V.some((v) => v > 0) ? (off > 0.03 ? `Nach dieser Rate liegt die größte Abweichung vom Ziel noch bei ${num(off * 100, 0)} Prozentpunkten. Die folgenden Raten gleichen das weiter aus.` : "Nach dieser Rate liegt das Depot nah am Ziel.") : ""} Beispielprodukte sind große, kostengünstige Fonds je Klasse, keine Empfehlung. Der Anleihefonds enthält alle Laufzeiten und schwankt etwas weniger als die zehnjährige Modellanleihe. Xetra-Gold ist eine Schuldverschreibung mit Anspruch auf Lieferung von Gold, die Kosten sind im Preis enthalten. Erwartete Werte beruhen auf den Kapitalmarktannahmen aus Abschnitt 3 und sind keine Zusage.`;
+  }
+  function wireUx() {
+    const q = document.getElementById("in-eq");
+    q.value = Math.round(ux.q * 100);
+    q.addEventListener("input", (e) => { ux.q = +e.target.value / 100; drawUx(); });
+    document.getElementById("in-rate").addEventListener("change", (e) => {
+      const v = parseEur(e.target.value);
+      if (v > 0) ux.rate = v;
+      e.target.value = nf(0).format(ux.rate); drawUx();
+    });
+    document.getElementById("btn-ux-reset").addEventListener("click", () => { ux.depot = K.map(() => 0); drawUx(); });
+  }
+
+  // ================================================================ section navigation
+  function wireNav() {
+    const nav = document.querySelector(".toc");
+    if (!nav || !("IntersectionObserver" in window)) return;
+    const links = [...nav.querySelectorAll("a")];
+    const byIdLink = new Map(links.map((a) => [a.getAttribute("href").slice(1), a]));
+    const io = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return;
+      const a = byIdLink.get(e.target.id);
+      if (!a) return;
+      links.forEach((l) => l.classList.toggle("on", l === a));
+      nav.scrollLeft = a.offsetLeft - nav.clientWidth / 2 + a.clientWidth / 2;
+    }), { rootMargin: "-40% 0px -55% 0px" });
+    byIdLink.forEach((a, id) => { const s = document.getElementById(id); if (s) io.observe(s); });
+  }
+
   document.getElementById("pc-add").addEventListener("click", () => { rows.push({ id: "world", w: 10, name: "", region: "us" }); renderRows(); runCheck(); });
   document.querySelectorAll("[data-example]").forEach(b => b.addEventListener("click", () => loadExample(b.dataset.example)));
   drawSignals();
+  drawLage(); lageText();
+  wireUx(); drawUx();
+  wireNav();
   loadExample("welt");
-  window.addEventListener("resize", () => { clearTimeout(window.__bt); window.__bt = setTimeout(drawBacktest, 150); });
+  window.addEventListener("resize", () => { clearTimeout(window.__bt); window.__bt = setTimeout(() => { drawBacktest(); drawLage(); }, 150); });
