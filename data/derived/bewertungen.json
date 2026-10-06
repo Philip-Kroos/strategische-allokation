@@ -1,5 +1,5 @@
 {
- "stand": "2026-10-04",
+ "stand": "2026-10-06",
  "regions": {
   "eq_us": {
    "cape_month": "2026-08",
@@ -16,9 +16,9 @@
    "dy_month": "2026-09",
    "cape_source": "siblis",
    "dy_source": "msci",
-   "cape": 22.213,
+   "cape": 22.226,
    "dy": 0.0287,
-   "coverage": 0.897,
+   "coverage": 0.8972,
    "top": [
     [
      "Großbritannien",
@@ -26,7 +26,7 @@
     ],
     [
      "Frankreich",
-     0.142
+     0.14
     ]
    ]
   },
@@ -35,22 +35,22 @@
    "dy_month": "2026-09",
    "cape_source": "siblis",
    "dy_source": "msci",
-   "cape": 26.671,
+   "cape": 26.848,
    "dy": 0.0202,
-   "coverage": 0.9266,
+   "coverage": 0.9259000000000001,
    "top": [
     [
      "Taiwan",
-     0.284
+     0.29
     ],
     [
      "Südkorea",
-     0.214
+     0.219
     ]
    ]
   }
  },
- "bund": 0.0359,
+ "bund": 0.035,
  "estr": 0.0244,
  "credit_ytm": 0.0424
 }
