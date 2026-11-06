@@ -1,23 +1,23 @@
 {
- "stand": "2026-10-20",
+ "stand": "2026-11-06",
  "regions": {
   "eq_us": {
    "cape_month": "2026-08",
-   "dy_month": "2026-09",
+   "dy_month": "2026-10",
    "cape_source": "siblis",
    "dy_source": "msci",
    "cape": 36.4,
-   "dy": 0.0111,
+   "dy": 0.0113,
    "coverage": 1.0,
    "top": null
   },
   "eq_eu": {
    "cape_month": "2026-08",
-   "dy_month": "2026-09",
+   "dy_month": "2026-10",
    "cape_source": "siblis",
    "dy_source": "msci",
    "cape": 22.226,
-   "dy": 0.0287,
+   "dy": 0.0286,
    "coverage": 0.8972,
    "top": [
     [
@@ -32,11 +32,11 @@
   },
   "eq_em": {
    "cape_month": "2026-08",
-   "dy_month": "2026-09",
+   "dy_month": "2026-10",
    "cape_source": "siblis",
    "dy_source": "msci",
    "cape": 26.848,
-   "dy": 0.0202,
+   "dy": 0.0219,
    "coverage": 0.9259000000000001,
    "top": [
     [
@@ -50,7 +50,7 @@
    ]
   }
  },
- "bund": 0.0347,
+ "bund": 0.0329,
  "estr": 0.0244,
- "credit_ytm": 0.0415
+ "credit_ytm": 0.0418
 }
